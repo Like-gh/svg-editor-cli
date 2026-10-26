@@ -1,4 +1,9 @@
+import { Application } from './cli/Application.js';
+
 /**
- * 进程入口（T01 阶段的占位实现，T04 接入真正的 REPL）。
+ * 进程入口：装配应用并启动 REPL。
+ *
+ * 启动方式：`npm run cli`（= `tsx src/index.ts`）。
  */
-export {};
+const application = Application.create();
+await application.run();

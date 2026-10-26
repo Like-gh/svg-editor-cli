@@ -3,6 +3,7 @@ import { FileGateway } from '../io/FileGateway.js';
 import { SvgParser } from '../io/SvgParser.js';
 import { SvgWriter } from '../io/SvgWriter.js';
 import { ShapeFactory } from '../domain/ShapeFactory.js';
+import { CommandRegistry } from './CommandRegistry.js';
 import { CommandSpec } from './CommandSpec.js';
 import { AddToShapeCommand } from './commands/AddToShapeCommand.js';
 import { BackShapeCommand } from './commands/BackShapeCommand.js';
@@ -40,12 +41,14 @@ export class CommandCatalog {
    * @param parser SVG 解析器
    * @param writer SVG 序列化器
    * @param factory 形状工厂
+   * @param registry 命令注册表（供 help 渲染读取描述符；延迟求值避免循环依赖）
    */
   static defaults(
     gateway: FileGateway,
     parser: SvgParser,
     writer: SvgWriter,
     factory: ShapeFactory,
+    registry: CommandRegistry,
   ): CommandSpec[] {
     return [
       new CommandSpec(
@@ -209,7 +212,7 @@ export class CommandCatalog {
           'show <id>',
           'show one shape in detail',
           'display',
-          'show <id]',
+          'show <id>',
           8,
         ),
         (args) => new ShowShapeCommand(args),
@@ -224,7 +227,7 @@ export class CommandCatalog {
       ),
       new CommandSpec(
         new CommandDescriptor('help', 'help', 'show all commands', 'display', 'help', 8),
-        () => new HelpCommand(),
+        () => new HelpCommand(() => registry.descriptors()),
       ),
     ];
   }

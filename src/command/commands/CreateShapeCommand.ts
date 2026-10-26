@@ -51,7 +51,7 @@ export class CreateShapeCommand extends EditCommand {
       rest = rest.slice(0, rest.length - 2);
     }
 
-    // E-05：未注册类型（内核不内置 box，只能由插件提供）
+    // E-05：未注册类型（复合图形类型属后续插件化阶段，内核不实现）
     this.provider = this.factory.requireProvider(this.typeName);
 
     const values: Record<string, string> = { id: this.shapeId };

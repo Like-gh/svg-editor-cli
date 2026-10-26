@@ -24,7 +24,7 @@ export class EditorHarness {
     const gateway = new FileGateway();
     const parser = new SvgParser(factory);
     const writer = new SvgWriter();
-    for (const spec of CommandCatalog.defaults(gateway, parser, writer, factory)) {
+    for (const spec of CommandCatalog.defaults(gateway, parser, writer, factory, this.registry)) {
       this.registry.register(spec);
     }
     this.invoker = new CommandInvoker(this.registry, this.session);

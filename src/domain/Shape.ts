@@ -13,7 +13,7 @@ export type Position = { readonly x: number; readonly y: number };
  * 设计要点：
  * 1. **几何知识只存在于子类**：基类只提供泛型算法（translate / scaleBy /
  *    getAttribute / setAttribute），算法遍历"属性访问器表"，因此全类层次
- *    没有一处 `switch(tag)`。
+ *    没有一处按标签的分支。
  * 2. **容器与叶子统一接口**：Container 覆写 translate / scaleBy 为递归，
  *    叶子保持单点语义，命令层对二者一视同仁（Composite 语义）。
  * 3. **自描述渲染**：describeForTree / describeForShow / toSvgXml 全部多态，

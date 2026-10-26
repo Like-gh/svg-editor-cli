@@ -3,7 +3,7 @@ import type { ShapeFieldRole } from './ShapeField.js';
 /**
  * 属性访问器：形状的"可读写属性"的自描述单元。
  *
- * 它是**多态取代 switch(tag)** 的关键零件：
+ * 它是**多态取代按标签分派**的关键零件：
  * 基类的 translate / scaleBy / getAttribute / setAttribute
  * 只需遍历访问器表，完全不需要知道具体图形类型。
  */
