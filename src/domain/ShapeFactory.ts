@@ -43,6 +43,31 @@ export class ShapeFactory {
   }
 
   /**
+   * 某类型是否已注册。
+   *
+   * @param typeName 类型名
+   */
+  isSupported(typeName: string): boolean {
+    return this.registry.find(typeName) !== undefined;
+  }
+
+  /**
+   * 该类型的内容型参数名（如 text 元素的 `text`）。
+   *
+   * 解析器据此把 XML 子文本喂给正确的参数，避免在解析器里硬编码类型名。
+   *
+   * @param typeName 类型名
+   * @returns 内容参数名；该类型没有内容参数返回 undefined
+   */
+  contentParamName(typeName: string): string | undefined {
+    const provider = this.registry.find(typeName);
+    if (provider === undefined) {
+      return undefined;
+    }
+    return provider.params.find((field) => field.role === 'content')?.name;
+  }
+
+  /**
    * 按 XML 标签创建实例（解析路径）。
    *
    * 与 `create` 的区别：未识别的标签**不报错**，而是返回 undefined，
