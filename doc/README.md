@@ -40,7 +40,7 @@
 | 架构约束 | 零 `switch(tag)`、零 `box` 实现、依赖方向矩阵零违规 |
 | 需求覆盖 | PRD **55** 条需求 + **18** 条错误文案 + **25** 条逐字会话契约，全覆盖 |
 | 缺陷闭环 | 独立验收发现 **8** 个缺陷（P0 0 / P1 1 / P2 7）→ **全部闭环** |
-| Git 历史 | **17** 个提交，分步推进；`final` tag 已打在最终提交上 |
+| Git 历史 | **21** 个提交，分步推进；`final` tag 已打在最终提交上 |
 
 ### 快速开始
 
@@ -599,10 +599,24 @@ QA 验收发现 PRD 自身存在计数错误与措辞矛盾，主理人修订 `d
 |---|---|---|---|
 | 1 | 读入的 `transform` 等**未建模属性不保真** | 含 `transform` 的外部文件读入再保存，视觉效果与原文件不同 | 读入时**显式告警** `warning: skipped attribute transform on g#x`；完整解法「组变换建模」已登记为变化点 V-13 |
 | 2 | 未建模的**元素**被忽略（`<path>` 等） | 读入含复杂路径的文件会丢失这些图形 | 读入时**显式告警** `warning: skipped unsupported element: <path>`，不计入元素数 |
-| 3 | undo 单元是**全量文档快照** | 文档规模极大时内存与时间成本上升 | `DocumentSnapshot` 已封装为独立类，换差量实现不影响命令层（V-08） |
-| 4 | `vitest` 串行执行 | 测试耗时略长（本机 ~11s） | Windows EPERM 规避（Δ-5） |
-| 5 | `read` 的告警行会出现在汇总行之前 | 输出行数多于规格示例 | **仅当确有告警时**；规格 §6 的 `other.svg` 夹具不含未建模属性/标签，输出逐字不变（T-18 已锁） |
-| 6 | REPL 在**管道模式**下回显输入行 | 管道输出包含 `svg> <命令>` 行 | 便于把脚本回放结果与规格 transcript 逐行对照；交互终端下由终端自身回显，无重复 |
+| 3 | 读入常见 SVG 属性也会告警 | 规格 §0.1 自己的示例（`transform` / `text-anchor` / `font-size`）读入时会产生 **6 行告警**（实测）：`transform`×2 + 自动补 id×2 + `text-anchor` + `font-size` | 这是**设计使然**而非缺陷：告警把「本阶段未建模」显式摊开，避免静默丢失；建模这些属性属后续阶段工作 |
+| 4 | undo 单元是**全量文档快照** | 文档规模极大时内存与时间成本上升 | `DocumentSnapshot` 已封装为独立类，换差量实现不影响命令层（V-08） |
+| 5 | `vitest` **串行执行** | 测试耗时略长（本机 ~11s） | Windows 上多 worker 并发写 SSR 模块缓存会 EPERM（Δ-5） |
+| 6 | `read` 的告警行会出现在汇总行之前 | 输出行数多于规格示例 | **仅当确有告警时**；规格 §6 的 `other.svg` 夹具不含未建模属性/标签，输出逐字不变（T-18 已锁） |
+| 7 | REPL 在**管道模式**下回显输入行 | 管道输出包含 `svg> <命令>` 行 | 便于把脚本回放结果与规格 transcript 逐行对照；交互终端下由终端自身回显，无重复 |
+
+**错误优先级（实测确认）**
+
+当一条命令同时触发多个问题时，报错顺序为：
+
+```text
+1. 命令名未知        → error: unknown command: frobnicate
+2. 参数用法不合法    → error: usage: delete <id>          ← 最先（参数解析在命令层，早于文档检查）
+3. 文档不存在        → error: no document. use 'init' or 'read' first
+4. 目标不存在/类型不符 → error: no such shape: nope
+```
+
+其中「锁优先于栈空」是独立的一层：`save` 之后即便撤销栈为空，`undo` 仍报 `error: undo not allowed after io command`。
 
 ---
 
@@ -628,14 +642,14 @@ $ npm run check:deps
 
 | 分类 | 文件 | 用例数 | 覆盖要点 |
 |---|---|:--:|---|
-| 逐字契约 | `test/golden/session.spec.ts` | 28 | PRD §4.9 的 T-01~T-25 全部逐字断言（`toBe` 完全相等，不允许包含式匹配、不允许忽略空白） |
+| 逐字契约 | `test/golden/session.spec.ts` | 28 | PRD §4.9 的 T-01~T-25 全部逐字断言（`toBe` 完全相等，不允许包含式匹配、不允许忽略空白）；另含「整段 stdout 与规格 §6 transcript 逐字相同」与「逐条回显与 PRD §6.3 归一后的树逐字相同」 |
 | 逐字错误 | `test/golden/errors.spec.ts` | 53 | E-01~E-18 逐字；每条错误后追加**原子性**断言（`tree` 文本 / 文档结构 / id 集合 / undo-redo 栈与 IO 锁四维比对） |
 | 原子性 | `test/golden/atomicity.spec.ts` | 12 | 连续多轮「出错命令 → tree 比对」，含出错后继续编辑 / undo / redo 的组合场景 |
-| 对抗场景 | `test/golden/adversarial.spec.ts` | 50 | id 大小写敏感、补 id 冲突顺延、group/ungroup/addto 的子孙与环检测、scale 容器语义、set 白名单、undo 栈空与 redo 清空、IO 锁优先级、浮点格式化、极长 id / 中文 id / 含尖括号与中文的 text 内容、负坐标、大数值 |
+| 对抗场景 | `test/golden/adversarial.spec.ts` | 55 | id 大小写敏感、补 id 冲突顺延、group/ungroup/addto 的子孙与环检测、scale 容器语义、set 白名单、undo 栈空与 redo 清空、IO 锁优先级、浮点格式化、极长 id / 中文 id / 含尖括号与中文的 text 内容、负坐标、大数值 |
 | 架构约束 | `test/golden/architecture.spec.ts` | 12 | 零 `switch (`、零 `\bbox\b`、一类一文件、依赖方向矩阵 |
-| 进程级端到端 | `test/golden/cli-e2e.spec.ts` | 4 | **规格 §6 完整 transcript 逐字节比对**、§6.1 流程图会话逐字比对 |
+| 进程级端到端 | `test/golden/cli-e2e.spec.ts` | 4 | 以**子进程**方式验证 4 项进程级行为：管道回显形态、横幅后无空行、注释与空行无输出、错误单行 `error: ` 且进程不中断 |
 | 缺陷回归 | `test/golden/qa-defect-fixes.spec.ts` | 14 | 本轮 4 个验收缺陷的专项回归 |
-| 单元 + IO | `test/unit/`（4）、`test/io/`、`test/support/`（4 夹具） | 97+ | 领域模型、序列化往返、HistoryStack、TreeColumnCalculator、Tokenizer、NumberFormat |
+| 单元 + IO | `test/unit/`（10）、`test/io/`（2） | 97 | 领域模型、序列化往返、HistoryStack、TreeColumnCalculator、Tokenizer、NumberFormat、REPL、Invoker |
 | **合计** | **19 个测试文件** | **275** | **全绿** |
 
 ### 4.3 覆盖率
@@ -652,7 +666,7 @@ All files | % Stmts | % Branch | % Funcs | % Lines
 规格把大量验收点写成**逐字输出**（错误文案、`tree`/`show` 形态、命令回显）。本项目的做法是：
 
 1. **把逐字期望直接写进测试**，断言用完全相等（`toBe`），空格数、列对齐、引号都参与比较。
-2. **§6 完整 transcript 逐字节比对**：`test/golden/cli-e2e.spec.ts` 从规格文件抽出整段会话，喂进 CLI 后与期望输出**逐字节 diff**。主理人另用独立脚本（从 `phase_cli_1.md` 正则抽取 transcript 再比对）复核过一次，结果为**零差异**（唯一多出的是 EOF 后的尾提示符 `svg> `，属 REPL 固有行为）。
+2. **§6 完整 transcript 逐字节比对**：`test/golden/session.spec.ts` 的「整段 stdout 与规格逐字相同（含启动横幅）」一条，把规格 §6 的 33 行会话整体喂进 CLI 后与期望输出**逐字节 diff**；`test/golden/cli-e2e.spec.ts` 另以**子进程**方式验证 4 项进程级行为（管道回显形态、横幅后无空行、注释与空行无输出、错误单行不中断）。主理人另用独立脚本（从 `phase_cli_1.md` 正则抽取 transcript 再比对）复核过一次，结果为**零差异**（唯一多出的是 EOF 后的尾提示符 `svg> `，属 REPL 固有行为）。
 3. **错误用例后必带状态比对**：每条错误断言之后都追加一次 `tree` 逐字比对，落实「命令失败不改变任何状态」。
 
 ### 4.5 架构约束的自动化
@@ -764,15 +778,16 @@ svg-editor-cli/
 │   └── index.ts         进程入口
 ├── test/
 │   ├── golden/    (7)   session / errors / atomicity / adversarial / architecture / cli-e2e / qa-defect-fixes
-│   ├── unit/      (4)
-│   ├── support/   (4)
-│   └── fixtures/  (2)
+│   ├── unit/      (10)  领域模型 / 快照 / 历史栈 / 对齐器 / 分词 / 数值 / REPL / Invoker
+│   ├── io/        (2)   SvgParser / SvgWriter
+│   ├── support/   (8)   测试夹具与桩（Stub / Harness / RecordingOutput / ScriptedInput …）
+│   └── fixtures/  (2)   other.svg（规格 §6 原件）/ unmodeled.svg（D-02 回归用）
 ├── package.json  tsconfig.json  tsconfig.test.json  vitest.config.ts  .gitignore  .editorconfig
 ```
 
 ### D. Git 历史与标签
 
-共 **17** 个提交，按「基础设施 → 需求 → 架构 → 领域 → IO → 命令 → 视图 → 缺陷修复 → 测试 → 文档」分步推进，**无 one-shot 大提交**。最终提交处打 tag **`final`**。
+共 **21** 个提交，按「基础设施 → 需求 → 架构 → 领域 → IO → 命令 → 视图 → 缺陷修复 → 测试 → 文档 → 收尾」分步推进，**无 one-shot 大提交**。最终提交处打 tag **`final`**。
 
 远程仓库：<https://github.com/Like-gh/svg-editor-cli>
 
