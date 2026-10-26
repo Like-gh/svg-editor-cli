@@ -143,7 +143,7 @@ test/support/…                      测试夹具（4 个）
 > tsc -p tsconfig.test.json      （无输出 = 零错误）
 
  Test Files  12 passed (12)
-      Tests  93 passed (93)
+      Tests  97 passed (97)
 ```
 
 ### 3.2 规格 §6 完整 transcript —— **逐字节相等** ✅
@@ -288,6 +288,21 @@ $ npm run check:deps
 
 ---
 
+## 4.1 自测中发现并修正的 3 个缺陷（过程记录素材，R-84）
+
+这三个缺陷是**在实现完成后手工跑边界会话时发现**的（PRD / 规格没有覆盖到），
+均已修复并补上回归用例：
+
+| # | 缺陷 | 现象 | 根因 | 修复 | 回归用例 |
+|---|---|---|---|---|---|
+| **B-1** | `addto` 的子孙判定方向写反 | `addto inner outer`（`outer` 是 `inner` 的祖先）被放行 | OQ-12 说的是「**目标容器**是源图形的子孙」，应判 `source.contains(target)`，实现写成了 `target.contains(source)` | 改为 `source.isContainer() && (target === source \|\| source.contains(target))`，文案点名**源容器 id** | `test/unit/CommandInvoker.test.ts` → `addto 目标容器是源容器的子孙时报专属文案` |
+| **B-2** | `addto g1 g1` 让容器成为自己的子节点 | 树里出现自嵌套，文档结构被破坏 | `addChild` 只在「父容器不同」时摘出，自嵌套没有拦截 | 命令层拦截 + `Container.addChild` 增加结构性不变量守卫 | 同上 + `test/unit/Document.test.ts` → `addChild 拒绝把容器加进自己` |
+| **B-3** | `addto` 把叶子移进其当前父容器时节点**重复入列** | 树里同一个 `rect#r2` 出现两次 | `Container.addChild` 在「父容器相同」时跳过了摘出，却仍然 `push` | 统一为「先从原父容器摘出，再入列」，语义变为「移到末尾」 | `test/unit/Document.test.ts` → `addChild 到同一父容器时是"移到末尾"，不会重复入列` |
+
+> 修复后已重新逐字节校验 §6 transcript，仍完全一致。
+
+---
+
 ## 5. 实际目录 vs 方案（供「一致性自查」节引用）
 
 | 检查项 | 结论 | 依据 |
@@ -298,7 +313,7 @@ $ npm run check:deps
 | 一类一文件核验 | **通过** | 脚本校验 66 个源文件：文件名 = 类名、每文件恰好 1 个顶层类型 |
 | 复合图形类型相关代码 | **零命中** | 词边界口径 `grep -rniE "\bbox\b" src/` 零命中；`viewBox` 为 SVG 强制属性名，非类型名 |
 | 逐字契约 | **§6 transcript 逐字节相等**；`help` 与 PRD Q10 逐字相等 | §3.2 |
-| 单元测试 | **93 个用例全绿**（12 个测试文件） | `npm test` |
+| 单元测试 | **97 个用例全绿**（12 个测试文件） | `npm test` |
 | 构建 | `npm run build` 通过，`node dist/index.js` 可运行 | §3.1 |
 
 ---
@@ -313,7 +328,8 @@ $ npm run check:deps
 | **T01** | `0805c11` | `feat(domain): 形状层次、属性访问器与文档模型` |
 | **T02** | `b578b93` | `feat(io): SVG 序列化、解析与缺 id 自动补齐` |
 | **T03** | `69cebec` | `feat(command): Command 模式骨架、19 条命令与撤销重做` |
-| **T04** | 见下 | `feat(view): tree/show/help 渲染与 CLI 外壳` |
+| **T04** | `ec8ed21` | `feat(view): tree/show/help 渲染与 CLI 外壳` |
+| 修正 | `b143b43` | `fix(command): 修正 addto 的子孙判定方向与同父容器重复入列`（见 §4.1） |
 
 > 未 push、未打 tag（按主理人要求由其统一执行）。
 
