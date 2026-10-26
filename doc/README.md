@@ -40,7 +40,7 @@
 | 架构约束 | 零 `switch(tag)`、零 `box` 实现、依赖方向矩阵零违规 |
 | 需求覆盖 | PRD **55** 条需求 + **18** 条错误文案 + **25** 条逐字会话契约，全覆盖 |
 | 缺陷闭环 | 独立验收发现 **8** 个缺陷（P0 0 / P1 1 / P2 7）→ **全部闭环** |
-| Git 历史 | **21** 个提交，分步推进；`final` tag 已打在最终提交上 |
+| Git 历史 | **24** 个提交，分步推进；`final` tag 已打在最终提交上 |
 
 ### 快速开始
 
@@ -73,6 +73,7 @@ saved to demo.svg (3 elements)
 npm run typecheck    # tsc -p tsconfig.test.json —— 零错误
 npm test             # vitest run —— 275/275
 npm run check:deps   # 依赖方向 + 硬约束扫描 —— 零违规
+npm run build        # tsc -p tsconfig.json —— 零错误，node dist/index.js 可运行
 npm run test:coverage
 ```
 
@@ -622,7 +623,7 @@ QA 验收发现 PRD 自身存在计数错误与措辞矛盾，主理人修订 `d
 
 ## 4. 质量保证手段
 
-### 4.1 三道闸门（可复现）
+### 4.1 四道闸门（可复现）
 
 ```bash
 $ npm run typecheck
@@ -636,6 +637,10 @@ $ npm test
 
 $ npm run check:deps
 依赖方向检查通过：扫描 66 个源文件，无违规。
+
+$ npm run build
+> tsc -p tsconfig.json
+（无错误输出 = 零错误；产物 node dist/index.js 可直接运行）
 ```
 
 ### 4.2 测试矩阵
@@ -787,7 +792,7 @@ svg-editor-cli/
 
 ### D. Git 历史与标签
 
-共 **21** 个提交，按「基础设施 → 需求 → 架构 → 领域 → IO → 命令 → 视图 → 缺陷修复 → 测试 → 文档 → 收尾」分步推进，**无 one-shot 大提交**。最终提交处打 tag **`final`**。
+共 **24** 个提交，按「基础设施 → 需求 → 架构 → 领域 → IO → 命令 → 视图 → 缺陷修复 → 测试 → 文档 → 收尾」分步推进，**无 one-shot 大提交**。最终提交处打 tag **`final`**。
 
 远程仓库：<https://github.com/Like-gh/svg-editor-cli>
 
