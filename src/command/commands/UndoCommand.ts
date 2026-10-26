@@ -18,6 +18,10 @@ export class UndoCommand extends Command {
   readonly category: CommandCategory = 'meta';
 
   override execute(session: EditorSession): CommandResult {
+    // 文档检查必须前置于历史栈检查：
+    // E-12 的豁免名单只有 init / read / help，undo 属于"其它命令"，
+    // 没有文档时应报 `no document. use 'init' or 'read' first` 而不是 `nothing to undo`。
+    session.requireDocument();
     const command = session.history.undo();
     return command.undo(session);
   }

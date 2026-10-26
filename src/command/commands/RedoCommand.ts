@@ -16,6 +16,8 @@ export class RedoCommand extends Command {
   readonly category: CommandCategory = 'meta';
 
   override execute(session: EditorSession): CommandResult {
+    // 与 undo 同理：文档检查前置于历史栈检查（E-12 优先于 E-16）。
+    session.requireDocument();
     const command = session.history.redo();
     return command.redo(session);
   }

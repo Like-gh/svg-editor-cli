@@ -74,6 +74,19 @@ export class CreateShapeCommand extends EditCommand {
     this.props = values;
   }
 
+  /**
+   * 只读校验：id 不得为空串或纯空白。
+   *
+   * 空 id 会产生畸形标题 `rect#`（QA 缺陷 D-07）。
+   * 本方法在快照捕获**之前**执行，因此失败不改变任何状态。
+   */
+  protected override validate(document: Document): void {
+    void document;
+    if (this.shapeId.trim() === '') {
+      throw new CommandError('invalid id: must not be empty');
+    }
+  }
+
   protected override apply(document: Document, session: EditorSession): CommandResult {
     void session;
     if (document.findById(this.shapeId) !== undefined) {

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" viewBox="0 0 400 300">
+  <g id="diagram" transform="translate(60,40)">
+    <rect id="a" x="0" y="0" width="120" height="60" fill="#4a90d9" opacity="0.5"/>
+  </g>
+</svg>

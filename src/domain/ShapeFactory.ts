@@ -68,6 +68,30 @@ export class ShapeFactory {
   }
 
   /**
+   * 某类型被**建模**的属性名集合。
+   *
+   * = 建图参数（provider.params）+ `id` + 三个绘制属性。
+   * 解析器用它判断"哪些 XML 属性是内核认识的"，
+   * 不认识的属性将被显式告警丢弃（QA 缺陷 D-02 的修法）。
+   *
+   * @param typeName 类型名
+   */
+  modeledAttributeNames(typeName: string): readonly string[] {
+    const provider = this.registry.find(typeName);
+    if (provider === undefined) {
+      return [];
+    }
+    const names = new Set<string>(['id']);
+    for (const field of provider.params) {
+      names.add(field.name);
+    }
+    for (const paint of Shape.PAINT_ATTRIBUTE_NAMES) {
+      names.add(paint);
+    }
+    return [...names];
+  }
+
+  /**
    * 按 XML 标签创建实例（解析路径）。
    *
    * 与 `create` 的区别：未识别的标签**不报错**，而是返回 undefined，

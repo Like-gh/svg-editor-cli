@@ -171,6 +171,21 @@ export class SvgParser {
       if (contentParam !== undefined && child.text !== '') {
         attributes[contentParam] = child.text;
       }
+      // 未建模属性显式告警（QA 缺陷 D-02 的修法）：
+      // 本阶段**不做属性透传**——若透传 transform，对含 transform 的容器执行
+      // move / scale（本阶段作用于子孙自身坐标）会与组级变换叠加，
+      // 得到"看似保真、实则语义错误"的结果；完整解法是**组变换建模**，
+      // 超出本阶段范围（与复合图形插件化同理：留缝不实现）。
+      // 因此选择"显式告警 + 文档声明"，让用户明确知道信息被丢弃了。
+      const modeled = this.factory.modeledAttributeNames(child.tag);
+      for (const name of Object.keys(attributes)) {
+        if (modeled.includes(name)) {
+          continue;
+        }
+        warnings.push(
+          `warning: skipped attribute ${name} on ${child.tag}#${attributes['id'] ?? ''}`,
+        );
+      }
       const shape = this.factory.createFromXml(child.tag, attributes);
       if (shape === undefined) {
         warnings.push(`warning: skipped unsupported element: <${child.tag}>`);

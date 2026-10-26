@@ -2,6 +2,7 @@ import { CommandError } from '../shared/CommandError.js';
 import { NumberFormat } from '../shared/NumberFormat.js';
 import type { Container } from './Container.js';
 import { AttributeAccessor } from './AttributeAccessor.js';
+import { ShapeFieldRole } from './ShapeField.js';
 import { ShapeSummary } from './ShapeSummary.js';
 
 /** 坐标点（主位置锚点）。 */
@@ -56,27 +57,40 @@ export abstract class Shape {
     return this.accessorCache;
   }
 
+  /** 绘制属性名（所有类型通用；`set` 白名单与序列化顺序都依赖它）。 */
+  static readonly PAINT_ATTRIBUTE_NAMES: readonly string[] = ['fill', 'stroke', 'stroke-width'];
+
+  /** 角色是否属于几何量（参与有限性校验）。 */
+  static isGeometryRole(role: ShapeFieldRole): boolean {
+    return role === 'position' || role === 'size' || role === 'endpoint';
+  }
+
   /**
    * 绘制属性访问器（fill / stroke / stroke-width）。
    *
    * 三者对所有类型通用，故放在基类；`set` 白名单与 SVG 序列化顺序都依赖它。
    */
   protected paintAccessors(): readonly AttributeAccessor[] {
-    return [
-      new AttributeAccessor('fill', 'paint', 'none', () => this.paintValues.get('fill'), (value) => {
-        this.paintValues.set('fill', value);
-      }),
-      new AttributeAccessor('stroke', 'paint', 'none', () => this.paintValues.get('stroke'), (value) => {
-        this.paintValues.set('stroke', value);
-      }),
-      new AttributeAccessor('stroke-width', 'paint', 'none', () => this.paintValues.get('stroke-width'), (value) => {
-        this.paintValues.set('stroke-width', value);
-      }),
-    ];
+    return Shape.PAINT_ATTRIBUTE_NAMES.map(
+      (name) =>
+        new AttributeAccessor(
+          name,
+          'paint',
+          'none',
+          () => this.paintValues.get(name),
+          (value) => {
+            this.paintValues.set(name, value);
+          },
+        ),
+    );
   }
 
   /**
    * 平移：只作用于 role 为 position / endpoint 的属性。
+   *
+   * 溢出保护：计算结果非有限时**抛错**而不是写入 ——
+   * 静默把 Infinity 写成 0 属于数据损坏（QA 缺陷 D-04）。
+   * 抛出的 CommandError 会被 EditCommand 的快照回滚路径捕获，命令失败不留痕迹。
    *
    * @param dx x 方向增量
    * @param dy y 方向增量
@@ -95,12 +109,18 @@ export abstract class Shape {
         continue;
       }
       const delta = accessor.axis === 'x' ? dx : dy;
-      accessor.set(NumberFormat.format(value + delta));
+      const next = value + delta;
+      if (!Number.isFinite(next)) {
+        throw new CommandError(`invalid value for ${accessor.name}: ${String(next)}`);
+      }
+      accessor.set(NumberFormat.format(next));
     }
   }
 
   /**
    * 等比缩放：作用于 role 为 position / size / endpoint 的属性。
+   *
+   * 溢出保护同 {@link Shape.translate}（QA 缺陷 D-04）。
    *
    * @param factor 缩放系数（调用方保证 > 0）
    */
@@ -117,7 +137,11 @@ export abstract class Shape {
       if (!Number.isFinite(value)) {
         continue;
       }
-      accessor.set(NumberFormat.format(value * factor));
+      const next = value * factor;
+      if (!Number.isFinite(next)) {
+        throw new CommandError(`invalid value for ${accessor.name}: ${String(next)}`);
+      }
+      accessor.set(NumberFormat.format(next));
     }
   }
 
@@ -226,6 +250,13 @@ export abstract class Shape {
       const value = accessor.get();
       if (value === undefined) {
         continue;
+      }
+      if (Shape.isGeometryRole(accessor.role)) {
+        // 脏数据不允许落盘：非有限几何值直接拒绝序列化（QA 缺陷 D-04 的兜底）
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+          throw new CommandError(`invalid value for ${accessor.name}: ${String(numeric)}`);
+        }
       }
       attributes.push(`${accessor.name}="${Shape.escapeXml(value)}"`);
     }

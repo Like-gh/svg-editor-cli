@@ -34,6 +34,24 @@ export class GroupShapesCommand extends EditCommand {
     this.memberIds = args.slice(1).map((argument) => argument.value);
   }
 
+  /**
+   * 只读校验：新容器 id 与成员 id 都不得为空串或纯空白。
+   *
+   * 空 id 会产生畸形标题 `g#`（QA 缺陷 D-07）。
+   * 本方法在快照捕获**之前**执行，因此失败不改变任何状态。
+   */
+  protected override validate(document: Document): void {
+    void document;
+    if (this.groupId.trim() === '') {
+      throw new CommandError('invalid id: must not be empty');
+    }
+    for (const memberId of this.memberIds) {
+      if (memberId.trim() === '') {
+        throw new CommandError('invalid id: must not be empty');
+      }
+    }
+  }
+
   protected override apply(document: Document, session: EditorSession): CommandResult {
     void session;
     if (document.findById(this.groupId) !== undefined) {
