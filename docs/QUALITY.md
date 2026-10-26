@@ -24,7 +24,7 @@
 | 失败原子性 | **12 / 12 通过**（30 轮混合压测 + 10 轮重复压测 + 8 种组合场景） |
 | 架构硬约束 | **12 / 12 通过**（`src/` 66 个源文件**全量扫描**，非抽样）：零 `switch (`、零 `\bbox\b`、零 `data-kind`、一类一文件、依赖矩阵零违规 |
 | 覆盖率 | 语句 **89.39%**、分支 **90.40%**、函数 **92.83%**、行 **89.39%** |
-| 缺陷闭环 | **D-01 ~ D-07 全部闭环**（4 个改码修复 + 3 个归口文档修订）；**新增 2 条 P2 文档缺陷（D-08 / D-09）**待订正 |
+| 缺陷闭环 | **D-01 ~ D-09 全部 9 条闭环**（4 个改码修复 + 5 个归口文档修订，含终验新发现的 D-08 / D-09） |
 | 四道闸门 | `typecheck` 零错误 ／ `test` 275 全绿 ／ `check:deps` 66 文件零违规 ／ `build` 零错误且 `dist/index.js` 可运行 |
 
 > **一句话交付结论**：命令 → 文档变更 → 逐字回显三者一一对应，失败原子性可断言，
@@ -252,8 +252,8 @@ $ git diff ebe06e7..HEAD --stat -- test/
 | **D-05** | L-8 声明的"额外文案"清单不完整（实际 3 条，非 2 条） | P2 | ✅ **归口文档修订**（`docs/IMPLEMENTATION.md` L-8 已更新为 **4 条**） | `docs/IMPLEMENTATION.md` L-8 逐条列出 `invalid value for <name>: <raw>`、`internal error: <msg>`、`warning: skipped unsupported element: <tag>`、`warning: skipped attribute <name> on <tag>#<id>`；四条均在实际行为中复现 |
 | **D-06** | `ungroup` 作用于叶子时复用 E-04 文案，超出 E-04 声明的触发条件 | P2 | ✅ **归口文档修订**（PRD v1.1 PR-4 把 `ungroup` 补入 E-04 触发条件） | `docs/PRD.md` v1.1 E-04 行已含 `ungroup`；行为未变（`error: not a container: a`），已由 `adversarial.spec.ts` 覆盖 |
 | **D-07** | 允许创建空 id（`create rect "" …` → 畸形标题 `rect#`） | P2 | ✅ **已修复并复验**（新增 **E-17**） | `qa-defect-fixes.spec.ts` → D-07 组 4 例；QA 独立复验：空串 id、纯空白 id、`group` 空新容器 id、`group` 空成员 id 四者均输出 `error: invalid id: must not be empty`，且 `tree`/结构/id 集合逐字不变 |
-| **D-08** | `docs/PRD.md` PR-5 把"save 无参无路径"问题记为 **D-09**，与本报告的缺陷编号 **D-03** 不一致 | **P2（新发现）** | ⏳ **待订正**（一行文字） | 全仓交叉引用审计：`docs/PRD.md` 仅此一处编号错指；其余 D-01~D-07 引用全部正确。**修法**：把 PRD PR-5 的 "D-09" 改为 "D-03" |
-| **D-09** | `doc/README.md` §4.4 第 2 点把「§6 完整 transcript 逐字节比对」归给 `test/golden/cli-e2e.spec.ts`，但该文件实际比对的是**硬编码的 4 条命令**的进程级输出；§6 完整 transcript（33 行）的逐字比对实际位于 `test/golden/session.spec.ts` | **P2（新发现）** | ⏳ **待订正**（表述） | 源码核对：`test/golden/cli-e2e.spec.ts` 的期望值是写死的 9 行（banner + 3 条命令 + 提示符），**不**从规格文件抽取；`test/golden/session.spec.ts` →「整段 stdout 与规格逐字相同（含启动横幅）」才是 33 行 §6 transcript 的比对。**修法**：README §4.4 第 2 点改为「§6 完整 transcript 的 33 行整段字节级比对位于 `test/golden/session.spec.ts`；`cli-e2e.spec.ts` 负责进程级冒烟（真实 `src/index.ts` + 管道 stdin 的提示符/回显形态）」 |
+| **D-08** | `docs/PRD.md` PR-5 把"save 无参无路径"问题记为 **D-09**，与本报告的缺陷编号 **D-03** 不一致 | **P2（终验新发现）** | ✅ **已订正** | 全仓交叉引用审计：`docs/PRD.md` 仅此一处编号错指，其余 D-01~D-07 引用全部正确。主理人已在 `4db89e2` 把 PRD PR-5 的 "D-09" 改为 **"D-03"**，复核通过 |
+| **D-09** | `doc/README.md` §4.4 第 2 点把「§6 完整 transcript 逐字节比对」归给 `test/golden/cli-e2e.spec.ts`，但该文件实际比对的是**硬编码的 4 条命令**的进程级输出；§6 完整 transcript（33 行）的逐字比对实际位于 `test/golden/session.spec.ts` | **P2（终验新发现）** | ✅ **已订正** | 源码核对：`cli-e2e.spec.ts` 的期望值是写死的 9 行（banner + 3 条命令 + 提示符），**不**从规格文件抽取；33 行 §6 transcript 的比对在 `session.spec.ts` →「整段 stdout 与规格逐字相同（含启动横幅）」。主理人已在 `4db89e2` 订正 §4.2 与 §4.4 的归属表述，复核通过 |
 
 ### 3.1 P0 阻断 —— 0 条
 
@@ -503,8 +503,8 @@ All files          |   89.39 |    90.4 |   92.83 |   89.39 |
 | **D-05** | 实现报告声明"额外文案只有 2 条"，实际有 3 条 | QA 把 `docs/IMPLEMENTATION.md` 的 L-8 与实际行为逐条对照 | L-8 撰写时未包含 OQ-06 的"跳过未知元素"告警 | **归口文档修订**：L-8 更新为 **4 条**（新增 `warning: skipped unsupported element: <tag>` 与 D-02 新增的 `warning: skipped attribute …`） | 行为本身已被 `adversarial.spec.ts` 覆盖；文档由 IMPLEMENTATION.md 承载 | ✅ 归口文档修订完成 |
 | **D-06** | `ungroup <叶子>` 复用 E-04 文案，但 E-04 的触发条件没列 `ungroup` | QA 探测 `ungroup` 作用于叶子时的输出 | 实现复用了 E-04 文案，但 PRD 未枚举该触发点 | **归口文档修订**：PRD v1.1 PR-4 把 `ungroup` 补入 E-04 触发条件。**实现零改动** | `adversarial.spec.ts` →「ungroup 之后再出错」 | ✅ 归口文档修订完成 |
 | **D-07** | 空 id 被接受，产生畸形标题 `rect#` | QA 用极端输入探测（`create rect "" …`） | id 只做了"唯一性"检查，没有"非空"检查 | 在 `validate()`（**快照捕获之前**）拒绝空串 / 纯空白 id，抛 `error: invalid id: must not be empty`（新增文案，登记为 **E-17**）；`create` 与 `group`（新容器 id 与成员 id）都覆盖 | `qa-defect-fixes.spec.ts` → D-07 组 4 例 | ✅ 已修复，QA 复验 4 条命令逐字一致且状态不变 |
-| **D-08** | PRD PR-5 把"save 无参无路径"问题记为 **D-09**，与实际编号 **D-03** 不符 | QA 复验时做全仓缺陷编号交叉引用审计 | 撰写 PR-5 时误用了另一套编号 | 把 PRD PR-5 的 "D-09" 改为 "D-03"（**一行文字**） | — （文档交叉引用，建议后续加一条"文档编号一致性"断言） | ⏳ **待订正** |
-| **D-09** | `doc/README.md` §4.4 第 2 点把「§6 完整 transcript 逐字节比对」归给 `cli-e2e.spec.ts`，但该文件比对的是硬编码的 4 条命令 | QA 复验时核对 README 与测试源码的对应关系 | 撰写 README 时把"主理人独立脚本的抽取比对"与 QA 测试文件的职责混在了一起 | 改为：§6 完整 transcript（33 行）的整段字节级比对位于 `test/golden/session.spec.ts`；`cli-e2e.spec.ts` 负责进程级冒烟（真实 `src/index.ts` + 管道 stdin 的提示符/回显形态） | — （文档表述） | ⏳ **待订正** |
+| **D-08** | PRD PR-5 把"save 无参无路径"问题记为 **D-09**，与实际编号 **D-03** 不符 | QA 复验时做全仓缺陷编号交叉引用审计 | 撰写 PR-5 时误用了另一套编号 | 把 PRD PR-5 的 "D-09" 改为 "D-03"（**一行文字**） | — （文档交叉引用，建议后续加一条"文档编号一致性"断言） | ✅ **已订正**（`4db89e2`） |
+| **D-09** | `doc/README.md` §4.4 第 2 点把「§6 完整 transcript 逐字节比对」归给 `cli-e2e.spec.ts`，但该文件比对的是硬编码的 4 条命令 | QA 复验时核对 README 与测试源码的对应关系 | 撰写 README 时把"主理人独立脚本的抽取比对"与 QA 测试文件的职责混在了一起 | 改为：§6 完整 transcript（33 行）的整段字节级比对位于 `test/golden/session.spec.ts`；`cli-e2e.spec.ts` 负责进程级冒烟（真实 `src/index.ts` + 管道 stdin 的提示符/回显形态） | — （文档表述） | ✅ **已订正**（`4db89e2`，§4.2 与 §4.4 两处） |
 
 ### 8.2 这条闭环链本身的三个可复用经验
 
@@ -518,11 +518,11 @@ All files          |   89.39 |    90.4 |   92.83 |   89.39 |
 
 | # | 事项 | 级别 | 责任方 | 说明 |
 |---|---|:--:|---|---|
-| 1 | **D-08**：`docs/PRD.md` PR-5 的 "D-09" → "D-03" | P2 | 主理人 / 产品经理 | 一行文字 |
-| 2 | **D-09**：`doc/README.md` §4.4 第 2 点关于 §6 transcript 比对归属的表述 | P2 | 主理人 | 一处表述订正（QA 不改他人文件） |
-| 3 | **O-12**：在 `doc/README.md`「已知限制」里提一句"读入外部 SVG 常见的 `text-anchor` / `font-size` / `class` / `transform` 均会产生告警" | P2 | 主理人 | 避免使用者误以为出错 |
-| 4 | **O-10**：在 README 写明错误优先级（参数/类型校验 → 文档存在性 → 目标存在性） | P2 | 主理人 | 说明为何 `create box` 在无文档时报 E-05 而非 E-12 |
-| 5 | **O-03 / L-7 / L-12**：在 README 声明"undo 单元 = 全量快照（O(文档规模)）"与"测试串行执行（Windows EPERM 规避）" | P2 | 主理人 | 已知限制透明化 |
+| 1 | **D-08**：`docs/PRD.md` PR-5 的 "D-09" → "D-03" | P2 | 主理人 / 产品经理 | ✅ 已订正（`4db89e2`） |
+| 2 | **D-09**：`doc/README.md` §4.4 第 2 点关于 §6 transcript 比对归属的表述 | P2 | 主理人 | ✅ 已订正（`4db89e2`，§4.2 + §4.4） |
+| 3 | **O-12**：在 `doc/README.md`「已知限制」里提一句"读入外部 SVG 常见的 `text-anchor` / `font-size` / `class` / `transform` 均会产生告警" | P2 | 主理人 | ✅ 已补（README「已知限制」第 3 条，含 §0.1 示例 6 行告警的实测） |
+| 4 | **O-10**：在 README 写明错误优先级（参数/类型校验 → 文档存在性 → 目标存在性） | P2 | 主理人 | ✅ 已补（README「错误优先级（实测确认）」） |
+| 5 | **O-03 / L-7 / L-12**：在 README 声明"undo 单元 = 全量快照（O(文档规模)）"与"测试串行执行（Windows EPERM 规避）" | P2 | 主理人 | ✅ 已补（变化点 V-08 + 已知限制第 5 条） |
 | 6 | **推送远程 + `final` tag** | — | 主理人 | 任务书 §1.1 要求；QA 未 push、未打 tag、未改 git 历史 |
 | 7 | （可选）加一条"文档缺陷编号一致性"断言，锁住 D-08 这类错指 | P3 | QA | 本轮未加（提交范围限定为 `docs/QUALITY.md`） |
 
