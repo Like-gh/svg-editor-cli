@@ -25,7 +25,7 @@
 | 架构硬约束 | **12 / 12 通过**（`src/` 66 个源文件**全量扫描**，非抽样）：零 `switch (`、零 `\bbox\b`、零 `data-kind`、一类一文件、依赖矩阵零违规 |
 | 覆盖率 | 语句 **89.39%**、分支 **90.40%**、函数 **92.83%**、行 **89.39%** |
 | 缺陷闭环 | **D-01 ~ D-07 全部闭环**（4 个改码修复 + 3 个归口文档修订）；**新增 2 条 P2 文档缺陷（D-08 / D-09）**待订正 |
-| 三道闸门 | `typecheck` 零错误 ／ `test` 275 全绿 ／ `check:deps` 66 文件零违规 |
+| 四道闸门 | `typecheck` 零错误 ／ `test` 275 全绿 ／ `check:deps` 66 文件零违规 ／ `build` 零错误且 `dist/index.js` 可运行 |
 
 > **一句话交付结论**：命令 → 文档变更 → 逐字回显三者一一对应，失败原子性可断言，
 > 架构硬约束被固化为可执行断言；本轮 QA 提出的 7 个缺陷全部闭环（4 个改码 + 3 个改文档），
@@ -349,8 +349,10 @@ $ git diff ebe06e7..HEAD --stat -- test/
 ```
  Test Files  19 passed (19)
       Tests  275 passed (275)
-   Duration  11.21s
+   Duration  10.35s
 ```
+
+> 最终复跑（`11904a9` 之后、实现方声明"不再动源码"之后）：仍为 **19 文件 / 275 全绿 / 0 失败**。
 
 ### 5.3 `npm run check:deps`
 
@@ -390,7 +392,18 @@ All files          |   89.39 |    90.4 |   92.83 |   89.39 |
 - `src/cli/` 偏低的原因是 `Application.ts` / `ReadlineInputSource.ts` / `index.ts` 是**进程入口**，只在 `cli-e2e.spec.ts` 里以**子进程**方式被端到端验证（子进程不计入 v8 覆盖率），因此**行为已被覆盖但统计上显示为 0%**。
 - `vitest.config.ts` 已设 `coverage.reportOnFailure: true`，保证**有失败用例时也能产出覆盖率报告**。
 
-### 5.5 用例统计
+### 5.5 `npm run build`（构建闸门）
+
+```
+> svg-editor-cli@0.1.0 build
+> tsc -p tsconfig.json
+```
+**零错误**，产物 `dist/index.js` 可直接运行（`node dist/index.js` 正常输出横幅与提示符）。
+
+> 至此四道闸门（typecheck / test / check:deps / build）全绿，
+> 加覆盖率度量（§5.4）——**最终验收复跑于 `11904a9` 之后，结论不变**。
+
+### 5.6 用例统计
 
 | 类别 | 文件 | 用例数 |
 |---|---|:--:|
