@@ -50,6 +50,10 @@ export class GoldenSession {
    */
   async exec(line: string): Promise<string[]> {
     const output = new RecordingOutput();
+    // 最后一个参数是 `echoInput`：这里**故意关掉**输入回显，
+    // 因此断言的期望值里既没有提示符 `svg> `、也没有被回显的输入行。
+    // 回显行为（L-6：非 TTY 时 REPL 回显输入行）由
+    // `test/golden/cli-e2e.spec.ts` 以真实子进程的方式单独断言。
     const repl = new Repl(this.invoker, new ScriptedInput([line]), output, new Tokenizer(), false);
     await repl.run();
     // 第 0 行是启动横幅

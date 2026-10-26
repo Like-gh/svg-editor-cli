@@ -467,7 +467,7 @@ describe('对抗：浮点数的回显口径（R-93 / Q12）', () => {
     expect(await attributeOf(session, 'whole', 'x')).toBe('10');
   });
 
-  it('⚠ 已知缺陷 D-03：数值溢出被静默写成 0（不得静默破坏几何）', async () => {
+  it('⚠ 已知缺陷 D-04：数值溢出被静默写成 0（不得静默破坏几何）', async () => {
     const session = new GoldenSession();
     await session.exec('init 800 600');
     await session.exec('create rect big 1e308 1e308 1 1');
@@ -615,6 +615,64 @@ describe('对抗：save 的路径语义链（L-4）', () => {
     } finally {
       workspace.cleanup();
     }
+  });
+});
+
+describe('对抗：tree 的子树模式与列对齐边界（OQ-02 / PRD §6.1 规则 5）', () => {
+  it('空文档的 tree 逐字只有 `svg (800x600)` 一行（R-54）', async () => {
+    const session = new GoldenSession();
+    await session.exec('init 800 600');
+    expect(await session.exec('tree')).toEqual(['svg (800x600)']);
+  });
+
+  it('`tree <叶子>` 逐字只有 `tag#id` 一行（R-54）', async () => {
+    const session = new GoldenSession();
+    await session.exec('init 800 600');
+    await session.exec('create rect bg 0 0 800 600 #ffffff');
+    expect(await session.exec('tree bg')).toEqual(['rect#bg']);
+  });
+
+  it('`tree <容器>` 的根行只有 `tag#id`，其下节点相对 depth 从 1 起（OQ-02）', async () => {
+    const session = new GoldenSession();
+    await session.exec('init 800 600');
+    await session.exec('create g g1');
+    await session.exec('create rect a 0 0 1 1 in g1');
+    await session.exec('create rect b 0 0 1 1');
+    expect(await session.exec('tree g1')).toEqual([
+      'g#g1',
+      '└── rect#a  x=0 y=0 w=1 h=1',
+    ]);
+  });
+
+  it('超长 id 时属性行仍至少保留 1 个空格（PRD §6.1 规则 5）', async () => {
+    const session = new GoldenSession();
+    await session.exec('init 800 600');
+    await session.exec('create g g1');
+    await session.exec('create rect averyveryverylongidentifier 0 0 1 1 in g1');
+    await session.exec('create rect b 0 0 1 1');
+    expect(await session.exec('tree')).toEqual([
+      'svg (800x600)',
+      '├── g#g1',
+      '│   └── rect#averyveryverylongidentifier  x=0 y=0 w=1 h=1',
+      '└── rect#b                                x=0 y=0 w=1 h=1',
+    ]);
+    expect(await session.exec('tree g1')).toEqual([
+      'g#g1',
+      '└── rect#averyveryverylongidentifier  x=0 y=0 w=1 h=1',
+    ]);
+  });
+
+  it('容器行不带属性行、也不参与列宽计算', async () => {
+    const session = new GoldenSession();
+    await session.exec('init 800 600');
+    await session.exec('create g averyveryverylongcontainername');
+    await session.exec('create rect b 0 0 1 1');
+    // 容器名很长，但属性列只由带属性行的节点决定 → col = 2 + (4 + len("rect#b")) = 12
+    expect(await session.exec('tree')).toEqual([
+      'svg (800x600)',
+      '├── g#averyveryverylongcontainername',
+      '└── rect#b  x=0 y=0 w=1 h=1',
+    ]);
   });
 });
 

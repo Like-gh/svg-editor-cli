@@ -12,14 +12,14 @@
 | 维度 | 结论 |
 |---|---|
 | 逐字契约（T-01 ~ T-25） | **25 / 25 通过**（另含 §6 全文 transcript、§6.1 流程图会话两条整段逐字比对，均通过） |
-| 逐字错误文案（E-01 ~ E-16） | **16 / 16 基准通过**；50 条错误用例中 **48 通过、2 失败**（失败项为同一缺陷 D-01 的两个变体） |
+| 逐字错误文案（E-01 ~ E-16） | **16 / 16 基准通过**；49 条错误用例中 **47 通过、2 失败**（失败项为同一缺陷 D-01 的两个变体；另有 4 条表自检 / 豁免用例全部通过） |
 | 失败原子性（R-04） | **12 / 12 通过**（含 30 轮混合压测 + 10 轮重复压测 + 8 种组合场景） |
 | 架构硬约束 | **12 / 12 通过**（全量扫描 `src/`，非抽样） |
-| 对抗性探测 | **50 条用例：49 通过、1 失败**（失败项为缺陷 D-03 的证据） |
+| 对抗性探测 | **55 条用例：54 通过、1 失败**（失败项为缺陷 D-04 的证据） |
 | 进程级端到端 | **4 / 4 通过** |
-| **总用例数** | **256 条**（黄金 159 + 既有单元/IO 97），**253 通过 / 3 失败** |
+| **总用例数** | **261 条**（黄金 164 + 既有单元/IO 97），**258 通过 / 3 失败** |
 | **缺陷** | **P0 阻断 0 条、P1 重要 1 条、P2 轻微 4 条**（另有 2 条 P2 文档/一致性缺陷、11 条观察项） |
-| **覆盖率** | 语句 **88.48%**、分支 **90.01%**、函数 **92.00%**、行 **88.48%**（v8，已排除 3 个纯类型文件） |
+| **覆盖率** | 语句 **89.26%**、分支 **90.41%**、函数 **92.72%**、行 **89.27%**（v8，已排除 3 个纯类型文件） |
 | 架构硬约束 | 零 `switch (`、零 `\bbox\b`、一类一文件、依赖方向矩阵 **全部零违规** |
 
 > **总体判定：功能完整、契约逐字达标、架构约束零违规，可以进入交付阶段**；
@@ -36,12 +36,12 @@
 | **逐字契约（T-xx）** | `test/golden/session.spec.ts` | 28 | 28 | 0 | 25 条 T-xx 逐条用例 + 1 条契约表自检 + §6 全文 transcript + §6.1 流程图会话 |
 | **错误文案（E-xx）** | `test/golden/errors.spec.ts` | 53 | 51 | 2 | 49 条错误用例（16 条基准 + 33 条触发路径变体）+ 1 条表自检 + 3 条豁免用例；**每条错误后追加原子性断言** |
 | **原子性** | `test/golden/atomicity.spec.ts` | 12 | 12 | 0 | 30 轮混合压测 / 10 轮重复压测 / 8 种组合场景 |
-| **对抗场景** | `test/golden/adversarial.spec.ts` | 50 | 49 | 1 | 自造刁钻输入（id 边界、容器语义、浮点、极端输入、往返保真、路径语义链…） |
+| **对抗场景** | `test/golden/adversarial.spec.ts` | 55 | 54 | 1 | 自造刁钻输入（id 边界、容器语义、浮点、极端输入、往返保真、路径语义链、tree 子树模式…） |
 | **架构约束** | `test/golden/architecture.spec.ts` | 12 | 12 | 0 | 四类硬约束全量静态扫描 |
 | **进程级端到端** | `test/golden/cli-e2e.spec.ts` | 4 | 4 | 0 | 真进程入口 `src/index.ts` + 管道 stdin/stdout |
-| **黄金小计** | `test/golden/**` | **159** | **156** | **3** | |
+| **黄金小计** | `test/golden/**` | **164** | **161** | **3** | |
 | 既有单元 / IO | `test/unit/**`、`test/io/**`（12 文件） | 97 | 97 | 0 | 工程师已有用例，本次未改动 |
-| **总计** | 18 个测试文件 | **256** | **253** | **3** | 3 条失败全部是**故意保留的缺陷证据** |
+| **总计** | 18 个测试文件 | **261** | **258** | **3** | 3 条失败全部是**故意保留的缺陷证据** |
 
 ### 1.2 失败用例清单（全部为故意保留的缺陷证据）
 
@@ -49,7 +49,7 @@
 |---|---|---|
 | `errors.spec.ts` → `E-12·undo 变体` | **D-01** | 无文档时 `undo` 报 `error: nothing to undo`，应为 `error: no document. use 'init' or 'read' first` |
 | `errors.spec.ts` → `E-12·redo 变体` | **D-01** | 无文档时 `redo` 报 `error: nothing to redo`，应为 E-12 |
-| `adversarial.spec.ts` → `⚠ 已知缺陷 D-03` | **D-03** | 数值溢出被静默写成 `0`（几何被破坏），应报错且不改变状态 |
+| `adversarial.spec.ts` → `⚠ 已知缺陷 D-04` | **D-04** | 数值溢出被静默写成 `0`（几何被破坏），应报错且不改变状态 |
 
 ---
 
@@ -65,7 +65,7 @@
 
 | ID | 验证状态 | 依据（文件 → 断言） |
 |---|---|---|
-| R-01 | ✅ 通过 | `cli-e2e.spec.ts` →「管道模式下 stdout 与规格 transcript 同形」断言 `svg> init 800 600` 同形；全部 159 条黄金用例均经 **REPL 层**逐行驱动 |
+| R-01 | ✅ 通过 | `cli-e2e.spec.ts` →「管道模式下 stdout 与规格 transcript 同形」断言 `svg> init 800 600` 同形；全部 164 条黄金用例均经 **REPL 层**逐行驱动 |
 | R-02 | ✅ 通过 | `cli-e2e.spec.ts` →「注释行与空行不产生任何结果输出」；`adversarial.spec.ts` →「注释行与空行不产生任何输出」 |
 | R-03 | ✅ 通过 | `cli-e2e.spec.ts` → 首行逐字 `svg-editor 0.1 — type 'help' for commands`；`session.spec.ts` → 整段 transcript 首行 |
 | R-04 | ✅ 通过 | `errors.spec.ts` → **每条**错误用例后比对 `tree` / `structure` / `ids` / `history`；`atomicity.spec.ts` → 12 条 |
@@ -119,10 +119,10 @@
 | ID | 验证状态 | 依据 |
 |---|---|---|
 | R-50 | ✅ 通过 | **T-07**、**T-19** 逐字；容器行只有 `tag#id` |
-| R-51 | ✅ 通过 | **T-07**（col=19：`rect#bg` 后 8 / `text#title` 后 5 / `circle#c1` 后 2 / `rect#box` 后 3 空格）、**T-19**；§6.1 树 col=32 逐字见 `session.spec.ts` →「逐条回显与 PRD §6.3 归一后的树逐字相同」 |
-| R-52 | ✅ 通过 | `adversarial.spec.ts` →「`show c1` 逐字等于规格 §5.2 的三行」「顶层元素的 parent 写作 svg」 |
+| R-51 | ✅ 通过 | **T-07**（col=19：`rect#bg` 后 8 / `text#title` 后 5 / `circle#c1` 后 2 / `rect#box` 后 3 空格）、**T-19**；§6.1 树 col=32 逐字见 `session.spec.ts` →「逐条回显与 PRD §6.3 归一后的树逐字相同」；列对齐边界（超长 id 至少留 1 空格、容器不参与列宽计算）见 `adversarial.spec.ts` →「对抗：tree 的子树模式与列对齐边界（OQ-02 / PRD §6.1 规则 5）」 |
+| R-52 | ✅ 通过 | `adversarial.spec.ts` →「对抗：show 的逐字格式（R-52 / PRD §5.2）」→「`show c1` 逐字等于规格 §5.2 的三行」「顶层元素的 parent 写作 svg」 |
 | R-53 | ✅ 通过 | `adversarial.spec.ts` →「help 覆盖 §3 全部 19 个命令名（R-53 / R-94）」 |
-| R-54 | ✅ 通过 | `adversarial.spec.ts` →「tree 子树模式」`tree b` → 仅 `rect#b`；空文档 → 仅 `svg (800x600)` |
+| R-54 | ✅ 通过 | `adversarial.spec.ts` →「对抗：tree 的子树模式与列对齐边界（OQ-02 / PRD §6.1 规则 5）」→「空文档的 tree 逐字只有 `svg (800x600)` 一行（R-54）」「`tree <叶子>` 逐字只有 `tag#id` 一行（R-54）」 |
 
 #### SVG 读写契约（R-60 ~ R-64）
 
@@ -313,7 +313,7 @@ printf 'init 800 600\ncreate rect big 1e308 1e308 1 1\nmove big 1e308 1e308\ntre
 | **实际输出** | `rect#big moved to (0,0)`，随后 `tree` 显示 `x=0 y=0 w=1 h=1`（原值 `1e+308` 被抹掉） |
 | **根因** | `src/shared/NumberFormat.ts` 的 `format()` 用 `if (!Number.isFinite(value)) return '0';` 兜底；`Shape.translate` / `scaleBy` 未检测溢出 |
 | **建议修法** | ① 让 `NumberFormat.format()` 对非有限值**抛错**而非返回 `'0'`；或 ② 在 `Shape.translate` / `scaleBy` 里检测结果非有限时抛 `CommandError('invalid value for <name>: <raw>')`（沿用 L-8 已有的文案族）。推荐 ②，因为它保留了 `NumberFormat` 作为纯格式化函数的单一职责。 |
-| **回归用例（已保留，当前红）** | `test/golden/adversarial.spec.ts` →「⚠ 已知缺陷 D-03：数值溢出被静默写成 0（不得静默破坏几何）」 |
+| **回归用例（已保留，当前红）** | `test/golden/adversarial.spec.ts` →「⚠ 已知缺陷 D-04：数值溢出被静默写成 0（不得静默破坏几何）」 |
 
 ---
 
@@ -430,8 +430,8 @@ printf 'init 800 600\ncreate rect "" 0 0 1 1\ntree\n' | npm run cli
 
 ```
  Test Files  2 failed | 16 passed (18)
-      Tests  3 failed | 253 passed (256)
- Duration  6.5s
+      Tests  3 failed | 258 passed (261)
+ Duration  8.6s
 ```
 3 条失败 = 3 条**故意保留的缺陷证据**（D-01 × 2、D-04 × 1），已逐条列在 §1.2 与 §3。
 
@@ -448,7 +448,7 @@ printf 'init 800 600\ncreate rect "" 0 0 1 1\ntree\n' | npm run cli
 
 | 范围 | 语句 | 分支 | 函数 | 行 |
 |---|:--:|:--:|:--:|:--:|
-| **全部 `src/`** | **88.48%**（2168/2450） | **90.01%**（613/681） | **92.00%**（253/275） | **88.48%** |
+| **全部 `src/`** | **89.26%**（2187/2450） | **90.41%**（622/688） | **92.72%**（255/275） | **89.27%** |
 | `src/command/` | 97.88% | 97.36% | 95.00% | 97.88% |
 | `src/domain/` | 92.75% | 91.59% | 91.59% | 92.75% |
 | `src/view/` | 94.11% | 97.14% | 90.00% | 94.11% |
@@ -467,15 +467,15 @@ printf 'init 800 600\ncreate rect "" 0 0 1 1\ntree\n' | npm run cli
 
 | 类别 | 用例数 |
 |---|:--:|
-| 黄金用例（`test/golden/**`，6 个文件） | **159** |
+| 黄金用例（`test/golden/**`，6 个文件） | **164** |
 | 其中：逐字契约 T-xx | 25（+ 1 表自检 + 2 整段 transcript = 28） |
 | 其中：逐字错误文案 E-xx | 49 条错误用例（16 基准 + 33 变体）+ 1 表自检 + 3 豁免 = 53 |
 | 其中：原子性 | 12 |
 | 其中：架构约束 | 12 |
-| 其中：对抗场景 | 50 |
+| 其中：对抗场景 | 55 |
 | 其中：进程级端到端 | 4 |
 | 既有单元 / IO 用例（工程师提供，未改动） | 97 |
-| **总计** | **256** |
+| **总计** | **261** |
 
 ---
 
@@ -502,15 +502,15 @@ printf 'init 800 600\ncreate rect "" 0 0 1 1\ntree\n' | npm run cli
 
 ## 7. 质量保证手段小结（供 README「质量保证手段」节引用）
 
-1. **三道静态闸门**：① `npm run typecheck`（`tsc -p tsconfig.test.json`，覆盖 `src/` + `test/`，strict 模式，**零错误**）；② `npm run check:deps`（依赖方向 + 一类一文件 + 禁用项，**66 个源文件零违规**）；③ `npm test`（**256 条用例**）。
-2. **黄金回归套件（`test/golden/`，159 条）**：
+1. **三道静态闸门**：① `npm run typecheck`（`tsc -p tsconfig.test.json`，覆盖 `src/` + `test/`，strict 模式，**零错误**）；② `npm run check:deps`（依赖方向 + 一类一文件 + 禁用项，**66 个源文件零违规**）；③ `npm test`（**261 条用例**）。
+2. **黄金回归套件（`test/golden/`，164 条）**：
    - **逐字契约**（`session.spec.ts`）：PRD §4.9 的 **T-01 ~ T-25 全部 25 条**逐字断言（`toBe`，不用包含式匹配、不忽略空白），外加**规格 §6 完整 transcript（33 行）与 §6.1 流程图会话（15 行）的整段字节级比对**；T-07 / T-19 两处 `tree` 的**每一列空格**都参与比较（col=19）。
    - **逐字错误表**（`errors.spec.ts`）：PRD §4.8 的 **E-01 ~ E-16 全部 16 条**逐字断言 + **33 条触发路径变体**（同一文案的 delete/move/scale/set/front/back/show/tree/group/addto/canvas/save/undo/redo 等入口）；**每条错误用例之后追加原子性断言**——`tree` 文本、文档结构、id 集合、undo/redo 栈与 IO 锁状态四维逐字比对。
    - **原子性**（`atomicity.spec.ts`）：30 轮「成功编辑 → 失败命令 → 四维比对」混合压测 + 10 轮重复压测 + 8 种组合场景（出错后继续编辑 / undo / redo / undo+redo、group 中途出错、ungroup 后出错、保存失败后 undo、读入失败后当前文档不变、IO 锁下的出错与解锁）。
    - **架构硬约束**（`architecture.spec.ts`）：对 `src/**` **全量扫描**（非抽样）断言——零 `switch (`、零 `\bbox\b` 词边界命中、零 `data-kind`、一类一文件（文件名 = 类名）、依赖方向矩阵零违规、两处「待重构」标注存在。
-   - **对抗场景**（`adversarial.spec.ts`，50 条）：自造刁钻输入——id 大小写敏感共存、自动补 id 冲突顺延（`rect1` 占用 → 补 `rect2`/`rect3`）、E-07 的容器/子孙组合（与参数顺序无关）、ungroup 的"占据原位置"、addto 的子孙/自加/同父容器不重复入列、scale 的绝对坐标递归与非法因子、set 的白名单/容器/文本、undo/redo 栈空与清空、IO 锁优先级与解禁、显示类命令不入栈、`in` 子句与引号交互、浮点（`0.1+0.2 → 0.3`、`12.5` 原样、整数不带 `.0`）、极端输入（200 字符 id / 中文 id / 含空格 id / 负坐标 / 大数值 / 中文与尖括号文本）、read→save 往返保真（tree 逐字相同 + 两次 save 字节相同）、save 路径语义链。
+   - **对抗场景**（`adversarial.spec.ts`，55 条）：自造刁钻输入——id 大小写敏感共存、自动补 id 冲突顺延（`rect1` 占用 → 补 `rect2`/`rect3`）、E-07 的容器/子孙组合（与参数顺序无关）、ungroup 的"占据原位置"、addto 的子孙/自加/同父容器不重复入列、scale 的绝对坐标递归与非法因子、set 的白名单/容器/文本、undo/redo 栈空与清空、IO 锁优先级与解禁、显示类命令不入栈、`in` 子句与引号交互、浮点（`0.1+0.2 → 0.3`、`12.5` 原样、整数不带 `.0`）、极端输入（200 字符 id / 中文 id / 含空格 id / 负坐标 / 大数值 / 中文与尖括号文本）、tree 子树模式与列对齐边界（OQ-02 根行只有 `tag#id`、超长 id 至少留 1 空格、容器不参与列宽计算）、read→save 往返保真（tree 逐字相同 + 两次 save 字节相同）、save 路径语义链。
    - **进程级端到端**（`cli-e2e.spec.ts`）：以**子进程**跑真正的 `src/index.ts`，断言管道模式 stdout 与规格 transcript 同形、横幅后无空行、注释/空行无结果输出、错误单行且进程不中断。
-3. **可复现的度量**：覆盖率 `npm run test:coverage`（v8 provider，`reportOnFailure: true` 保证有红用例也能出数据）——语句 **88.48%**、分支 **90.01%**、函数 **92.00%**、行 **88.48%**。
+3. **可复现的度量**：覆盖率 `npm run test:coverage`（v8 provider，`reportOnFailure: true` 保证有红用例也能出数据）——语句 **89.26%**、分支 **90.41%**、函数 **92.72%**、行 **89.27%**。
 4. **缺陷即证据**：发现源码缺陷时**保留失败的回归用例**（不弱化断言、不改源码），由主理人路由给工程师；修复后用例自动转绿。本次保留 **3 条**失败用例，对应 **3 条缺陷**（D-01 × 2、D-04 × 1）。
 5. **独立验收立场**：工程师 `docs/IMPLEMENTATION.md` 的自述结论全部**由 QA 亲自复现**，其中 L-4（部分不成立）、L-8（清单不完整）被修正；L-5 的解释经独立证据判定为成立。
 6. **不越界的改动**：QA 只新增/修改 `test/`、`vitest.config.ts`、`package.json`（仅新增 coverage 依赖与 `test:coverage` 脚本），**未改动 `src/` 任何文件**，未 push、未打 tag、未改 git 历史。
@@ -528,7 +528,7 @@ printf 'init 800 600\ncreate rect "" 0 0 1 1\ntree\n' | npm run cli
 | 建议 | 修 **D-05 ~ D-07**（L-8 清单、ungroup 复用 E-04、空 id）与 **O-06 / O-07 / O-11**（PRD 措辞） | 工程师 / 主理人 |
 | 文档 | 更新 `docs/IMPLEMENTATION.md` 的 L-8 清单（QA 不修改该文件） | 工程师 |
 | 文档 | 在 `doc/README.md` 中声明 L-1/L-2/L-3/L-7/L-12 与本文第 6 节的逐条判定 | 主理人 |
-| 流程 | 缺陷修复后重跑 `npm run typecheck && npm test && npm run check:deps`，确认 **256 / 256 全绿** | QA |
+| 流程 | 缺陷修复后重跑 `npm run typecheck && npm test && npm run check:deps`，确认 **261 / 261 全绿** | QA |
 
 ---
 
