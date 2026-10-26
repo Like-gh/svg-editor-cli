@@ -42,7 +42,9 @@ export class AddToShapeCommand extends EditCommand {
     if (source === undefined) {
       throw new CommandError(`no such shape: ${this.shapeId}`);
     }
-    if (target.contains(source)) {
+    // OQ-12：目标容器是源容器的子孙（把容器加进它自己的子孙）→ 专属文案。
+    // 源是叶子时不受此限（把叶子移进它当前的父容器只是重排，无结构风险）。
+    if (source.isContainer() && (target === source || source.contains(target))) {
       throw new CommandError(
         `cannot add a container into its own descendant: ${this.shapeId}`,
       );

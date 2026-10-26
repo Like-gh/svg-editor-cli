@@ -1,3 +1,4 @@
+import { CommandError } from '../shared/CommandError.js';
 import { AttributeAccessor } from './AttributeAccessor.js';
 import { Shape } from './Shape.js';
 import { ShapeSummary } from './ShapeSummary.js';
@@ -28,7 +29,12 @@ export abstract class Container extends Shape {
    * @param index 插入位置；省略或越界时追加到末尾
    */
   addChild(shape: Shape, index?: number): void {
-    if (shape.parent !== null && shape.parent !== this) {
+    if (shape === this) {
+      // 结构性不变量：容器不能成为自己的子孙
+      throw new CommandError(`cannot add a container into itself: ${this.id}`);
+    }
+    if (shape.parent !== null) {
+      // 先从原父容器摘出（同一父容器时也要摘，否则会重复入列）
       shape.parent.removeChild(shape);
     }
     if (index === undefined || index < 0 || index > this.childShapes.length) {

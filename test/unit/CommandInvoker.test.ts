@@ -182,6 +182,29 @@ describe('CommandInvoker / 命令层', () => {
     expect(harness.run('undo')).toEqual(['rect#r1 restored to original position']);
   });
 
+  it('addto 目标容器是源容器的子孙时报专属文案（OQ-12）', () => {
+    const harness = new EditorHarness();
+    harness.run('init', '800', '600');
+    harness.run('create', 'g', 'outer');
+    harness.run('create', 'g', 'inner', 'in', 'outer');
+    expect(harness.error('addto', 'inner', 'outer')).toBe(
+      'cannot add a container into its own descendant: outer',
+    );
+    expect(harness.error('addto', 'outer', 'outer')).toBe(
+      'cannot add a container into its own descendant: outer',
+    );
+  });
+
+  it('addto 把叶子移进它当前的父容器不会重复入列', () => {
+    const harness = new EditorHarness();
+    harness.run('init', '800', '600');
+    harness.run('create', 'g', 'g1');
+    harness.run('create', 'rect', 'r1', '0', '0', '1', '1', 'in', 'g1');
+    expect(harness.run('addto', 'g1', 'r1')).toEqual(['rect#r1 added to g#g1']);
+    expect(harness.structure()).toBe(' g#g1\n  rect#r1');
+    expect(harness.session.requireDocument().elementCount()).toBe(2);
+  });
+
   it('IO 命令后 undo/redo 被禁止，直到下一次编辑命令', () => {
     const harness = new EditorHarness();
     harness.run('init', '800', '600');

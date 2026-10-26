@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CommandError } from '../../src/shared/CommandError.js';
 import { Circle } from '../../src/domain/Circle.js';
 import { Document } from '../../src/domain/Document.js';
 import { Group } from '../../src/domain/Group.js';
@@ -51,6 +52,24 @@ describe('Document', () => {
     expect(document.children).toHaveLength(0);
     expect(group.children).toHaveLength(1);
     expect(rect.parent).toBe(group);
+  });
+
+  it('addChild 到同一父容器时是"移到末尾"，不会重复入列', () => {
+    const group = new Group('g1');
+    const first = new Rect('r1', 0, 0, 1, 1);
+    const second = new Rect('r2', 0, 0, 2, 2);
+    group.addChild(first);
+    group.addChild(second);
+    group.addChild(first);
+    expect(group.children.map((child) => child.id)).toEqual(['r2', 'r1']);
+    expect(group.childCount).toBe(2);
+  });
+
+  it('addChild 拒绝把容器加进自己（结构性不变量）', () => {
+    const group = new Group('g1');
+    expect(() => group.addChild(group)).toThrowError(
+      new CommandError('cannot add a container into itself: g1'),
+    );
   });
 
   it('removeChild 清理父子关系', () => {
