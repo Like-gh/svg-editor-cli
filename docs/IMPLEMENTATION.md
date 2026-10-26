@@ -275,7 +275,7 @@ $ npm run check:deps
 
 | # | 限制 | 依据 | 说明 |
 |---|---|---|---|
-| **L-1** | **读入的 `transform` 属性不保真，且读入时产出告警** | OQ-07 + QA D-02 | 白名单未含 `transform`；读入带 `<g transform="translate(60,40)">` 的外部文件后再 save，该位移会丢失，**读入时会产生一行告警** `warning: skipped attribute transform on g#<id>`。完整解法是**组变换建模**（后续阶段扩展点）——若只做属性透传，对含 transform 的容器执行 `move`/`scale`（本阶段作用于子孙自身坐标）会与组级变换叠加，得到"看似保真、实则语义错误"的结果，故本阶段选择「显式告警 + 文档声明」 |
+| **L-1** | **读入的 `transform` 属性不保真，且读入时产出告警** | OQ-07 + QA D-02 | 白名单未含 `transform`；读入带 `<g transform="translate(60,40)">` 的外部文件后再 save，该位移会丢失，**读入时会产生一行告警** `warning: skipped attribute transform on g#<id>`。完整解法是**组变换建模**（后续阶段扩展点，见 §6 V-3）——若只做属性透传，对含 transform 的容器执行 `move`/`scale`（本阶段作用于子孙自身坐标）会与组级变换叠加，得到"看似保真、实则语义错误"的结果，故本阶段选择「显式告警 + 文档声明」 |
 | **L-2** | **未建模属性读入后不写回** | OQ-08 | `opacity` / `class` 等被忽略且不写回（输出保持"只含白名单属性"的干净 SVG），**读入时同样逐个告警** `warning: skipped attribute <name> on <tag>#<id>`；`transform` 同此处理 |
 | **L-3** | 用户可自建 id = `svg` | OQ-13 | 不做特殊限制；`show` 顶层元素时父级仍显示 `svg`，理论上存在歧义 |
 | **L-4** | `save` 无参时保存到「读入时的路径」 | R-12 + 实现取舍 | 实现里**显式 `save <file>` 之后会把该路径记为当前路径**，后续无参 `save` 会写到它；文档来自 `init` 且从未显式保存过时，报 `error: no file path. use 'save <file.svg>'`（OQ-09） |
@@ -315,7 +315,7 @@ QA 以**独立黑盒方式**验收（`test/golden/` 逐字契约 + 对抗性探�
 | **D-01** | 无文档时 `undo`/`redo` 报错错位 | 无文档时 `undo` 报 `error: nothing to undo`（应为 E-12） | `UndoCommand.execute()` 先调 `history.undo()`（内部判锁与栈空），文档检查在其之后 | 在 `history.undo()` / `history.redo()` **之前**调用 `session.requireDocument()`；有文档时行为不变（IO 锁着仍报 E-14，锁优先于栈空，OQ-11） | `src/command/commands/UndoCommand.ts:24`、`src/command/commands/RedoCommand.ts:20` | QA：`test/golden/errors.spec.ts` → `E-12·undo 变体` / `E-12·redo 变体`（自动转绿）<br>新增：`test/golden/qa-defect-fixes.spec.ts` → D-01 组 5 例 |
 | **D-04** | 数值溢出被静默写成 0 | `move big 1e308 1e308` 把坐标写成 0 且命令"成功" —— 静默数据损坏 | `NumberFormat.format()` 对非有限值返回 `'0'`（渲染层兜底合理），但**写回文档的路径复用了它** | 写回路径加有限性闸门：`Shape.translate` / `Shape.scaleBy` 在写入前检查计算结果，非有限则抛 `CommandError("invalid value for <属性名>: <原始值>")`（如 `invalid value for x: Infinity`）；异常走 `EditCommand.execute()` 既有的 try/catch 快照回滚，**命令失败不留痕迹**；另在 `Shape.svgAttributes()` 加落盘兜底，脏数据不允许序列化 | `src/domain/Shape.ts:114`（translate）/ `:142`（scaleBy）/ `:258`（svgAttributes 落盘兜底） | QA：`test/golden/adversarial.spec.ts` → `⚠ 已知缺陷 D-03：数值溢出被静默写成 0`（自动转绿）<br>新增：`qa-defect-fixes.spec.ts` → D-04 组 3 例 |
 | **D-07** | 空 id 被接受 | `create rect "" …` 生成畸形标题 `rect#` | id 只做了"唯一性"检查，没有"非空"检查 | 在 `validate()`（快照捕获**之前**）拒绝空串 / 纯空白 id，抛 `CommandError('invalid id: must not be empty')`（新增文案，登记为 E-17）；`create` 与 `group`（新容器 id 与成员 id）都覆盖 | `src/command/commands/CreateShapeCommand.ts:83`、`src/command/commands/GroupShapesCommand.ts:43` | 新增：`qa-defect-fixes.spec.ts` → D-07 组 4 例 |
-| **D-02** | 未建模属性被静默丢弃 | 读入含 `transform` 的外部 SVG 后再 save，容器变换消失、视觉结果改变，用户毫不知情 | 解析器只提取建模属性，未建模的直接丢掉、不发任何信号 | **决定：不透传，改为读入时显式告警**。理由：若透传 `transform`，对含 transform 的容器执行 `move`/`scale`（本阶段作用于子孙自身坐标）会与组级变换叠加，得到"看似保真、实则语义错误"的结果；完整解法是**组变换建模**，超出本阶段范围（与复合图形插件化同理：留缝不实现）。故本阶段选择「显式告警 + 文档声明」。<br>实现：解析时按 provider schema 算出"被建模的属性名集合"（`id` + 建图参数 + 三个绘制属性），集合外的属性逐个告警 `warning: skipped attribute <name> on <tag>#<id>`，告警在 `read` 汇总行**之前**输出 | `src/io/SvgParser.ts:186`、`src/domain/ShapeFactory.ts:79`（`modeledAttributeNames`） | 新增：`qa-defect-fixes.spec.ts` → D-02 组 2 例（含 T-18 回归：规格 §6 夹具不产生任何额外告警） |
+| **D-02** | 未建模属性被静默丢弃 | 读入含 `transform` 的外部 SVG 后再 save，容器变换消失、视觉结果改变，用户毫不知情 | 解析器只提取建模属性，未建模的直接丢掉、不发任何信号 | **已按裁决修复（显式告警方案），不再视为待办** ✅ —— 裁决：**不透传，改为读入时显式告警**。主理人确认的三点理由：① 静默丢弃这一核心顾虑已被显式告警完全覆盖（读入当场可见）；② `extraAttributes` 与「内核只建模白名单属性」的既有取向相反（等于往形状状态里塞一张本阶段不解释的表，`set` 白名单 / tree / show 契约 / 元素计数都需为它额外表态）；③ 透传 `transform` 会**引入**语义错误而非消除它——本阶段 `move`/`scale` 作用于子孙自身坐标，叠加未解释的组级变换后，用户要"平移 10"实际会平移 10 + 变换量，**看似保真、实则错误**比诚实的丢弃更危险。完整解法是**组变换建模**（见 §6 V-3），属独立阶段。<br>实现：解析时按 provider schema 算出"被建模的属性名集合"（`id` + 建图参数 + 三个绘制属性），集合外的属性逐个告警 `warning: skipped attribute <name> on <tag>#<id>`，告警在 `read` 汇总行**之前**输出 | `src/io/SvgParser.ts:186`、`src/domain/ShapeFactory.ts:79`（`modeledAttributeNames`） | 新增：`qa-defect-fixes.spec.ts` → D-02 组 2 例（含 T-18 回归：规格 §6 夹具不产生任何额外告警） |
 
 > 修复后已重新逐字节校验 §6 transcript，仍完全一致；QA 保留的 3 条红灯用例全部转绿。
 
@@ -336,7 +336,24 @@ QA 以**独立黑盒方式**验收（`test/golden/` 逐字契约 + 对抗性探�
 
 ---
 
-## 6. Git 提交历史
+## 6. 变化点假设与后续扩展点（供 `doc/README.md`「变化点假设」节引用）
+
+下表按"未来最可能发生变化的地方"排序，每条都写明**现状 / 留了什么缝 / 为什么现在不做**。
+
+| # | 变化点 | 现状 | 留了什么缝 / 为什么现在不做 |
+|---|---|---|---|
+| **V-1** | **图形类型注册**（插件化） | `ShapeRegistry` + `ShapeFactory` 已是 `Map` 注册表，`register()` 为 public | `ShapeProvider` 接口就是插槽本身：插件类型 `implements ShapeProvider` + `registry.register()` 即可接入，内核零改动。对应**待重构点②**（见 §2.1） |
+| **V-2** | **复合图形类型**（内部结构由插件拥有） | 内核**无任何实现**（`\box\b` 词边界零命中） | `Shape.isComposite()` 判定钩子已留（`ungroup` 的 E-06 分支文案到位、当前不可达）；子部件 id 派生规则、`set` 传播语义、序列化标记与读回还原，全部留给插件阶段 |
+| **V-3** | **组变换建模（`transform`）** | **不透传**；读入含 `transform` 的元素时逐个告警 `warning: skipped attribute transform on <tag>#<id>`，读入当场可见（D-02 已按裁决修复，见 §4.2） | 这是 D-02 的**完整解法**：`transform` 作为容器的**变换状态**被建模，而不是塞进一张内核不解释的属性表。建模后 `move`/`scale` 的语义需随之明确为"在组变换坐标系下操作"，并要同步决定：`set` 白名单是否含 `transform`、`tree`/`show` 如何呈现变换、快照与 undo 如何处理嵌套变换栈。牵动面超出本阶段，故单列为独立阶段（与 V-2 同属"留缝不实现"） |
+| **V-4** | **命令参数 schema 化** | 参数解析散在各命令的构造器里（`CreateShapeCommand` 已部分 schema 化） | 对应**待重构点①**（见 §2.1）：让每条命令声明自己的参数 schema、解析下沉到命令类，Invoker 只管分发，参数错误文案由 schema 统一生成 |
+| **V-5** | **内建类型 Provider 类化** | 内建 6 型以"类静态成员"在结构上充当 `ShapeProvider` | 属**待重构点②**的后续：为每个内建类型补 `XxxShapeProvider` 类，或把 `fromXml` 纳入 `ShapeProvider` 接口，使内建类型与插件类型完全同构 |
+| **V-6** | **undo 单元的差量 Memento** | 全量文档快照，内存 O(文档规模) | `DocumentSnapshot` 已封装成类，命令层只依赖 `capture` / `restoreTo` 两个入口，可内部换成差量而**不动任何命令** |
+| **V-7** | **输入源替换**（脚本回放 / GUI 通道） | `InputSource` 端口 + `ReadlineInputSource` 实现 | 换输入源即得脚本回放（R-95 本阶段不做）；CLI 通道与 REPL 通道共用同一套命令层，不需第二份实现 |
+| **V-8** | **输出格式扩展**（树形之外的视图） | `view` 层只依赖 `Shape` 的多态自描述（`ShapeSummary`） | 新增渲染器不需要改命令层：`ShapeSummary` 是渲染器唯一输入，加一种视图 = 加一个 `view` 类 |
+
+---
+
+## 7. Git 提交历史
 
 | 阶段 | Commit | 提交信息 |
 |---|---|---|
@@ -350,13 +367,13 @@ QA 以**独立黑盒方式**验收（`test/golden/` 逐字契约 + 对抗性探�
 | 修正 | `b143b43` | `fix(command): 修正 addto 的子孙判定方向与同父容器重复入列`（见 §4.1） |
 | 报告 | `f96cabb` / `0b5eb71` | `docs(implementation): 补充实现报告与自测缺陷记录` |
 | QA 验收 | `8ab7cdd` / `c5a8f33` / `131ecd9` | `test(golden): 补充逐字契约、错误文案与原子性回归套件` 等（QA 工程师） |
-| **本轮修复** | 见 §6 | `fix(command): 修复无文档 undo/redo 报错、数值溢出静默归零、空 id 接受与未建模属性静默丢弃`（D-01 / D-04 / D-07 / D-02，见 §4.2） |
+| **本轮修复** | 见 §7 | `fix(command): 修复无文档 undo/redo 报错、数值溢出静默归零、空 id 接受与未建模属性静默丢弃`（D-01 / D-04 / D-07 / D-02，见 §4.2） |
 
 > 未 push、未打 tag（按主理人要求由其统一执行）。
 
 ---
 
-## 7. 如何运行
+## 8. 如何运行
 
 ```bash
 npm install          # 依赖：fast-xml-parser（唯一运行时依赖）+ 4 个 devDeps
