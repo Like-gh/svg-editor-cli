@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GoldenSession } from '../support/GoldenSession.js';
 import { CompositeGroupStub } from '../support/CompositeGroupStub.js';
 import { captureState } from '../support/SessionState.js';
+import { TempWorkspace } from '../support/TempWorkspace.js';
 
 /**
  * PRD §4.8「错误信息逐字表」—— **E-01 ~ E-16 全部 16 条**。
@@ -370,28 +371,34 @@ describe('PRD §4.8 错误信息逐字表 E-01 ~ E-16', () => {
 
   for (const errorCase of ERROR_CASES) {
     it(`${errorCase.id}｜${errorCase.input}`, async () => {
-      const session = new GoldenSession();
-      for (const line of errorCase.setup) {
-        await session.exec(line);
-      }
-      errorCase.prepare?.(session);
+      // 一律在临时工作目录里跑：E-11 / E-14 会真的触碰文件系统
+      const workspace = new TempWorkspace();
+      try {
+        const session = new GoldenSession();
+        for (const line of errorCase.setup) {
+          await session.exec(line);
+        }
+        errorCase.prepare?.(session);
 
-      const before = await capture(session);
-      const actual = await session.exec(errorCase.input);
+        const before = await capture(session);
+        const actual = await session.exec(errorCase.input);
 
-      // 逐字：单行、前缀恰好一次
-      expect(actual.length).toBe(1);
-      expect(actual[0]).toBe(errorCase.expected);
+        // 逐字：单行、前缀恰好一次
+        expect(actual.length).toBe(1);
+        expect(actual[0]).toBe(errorCase.expected);
 
-      // 原子性（R-04）：失败不得改变任何状态
-      const after = await capture(session);
-      expect(after.tree).toBe(before.tree);
-      expect(after.structure).toBe(before.structure);
-      expect(after.ids).toBe(before.ids);
-      expect(after.history).toBe(before.history);
+        // 原子性（R-04）：失败不得改变任何状态
+        const after = await capture(session);
+        expect(after.tree).toBe(before.tree);
+        expect(after.structure).toBe(before.structure);
+        expect(after.ids).toBe(before.ids);
+        expect(after.history).toBe(before.history);
 
-      if (errorCase.withoutDocument === true) {
-        expect(session.session.document).toBeNull();
+        if (errorCase.withoutDocument === true) {
+          expect(session.session.document).toBeNull();
+        }
+      } finally {
+        workspace.cleanup();
       }
     });
   }
