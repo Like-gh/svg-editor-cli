@@ -1,0 +1,47 @@
+%% svg-editor-cli — create 命令完整调用链
+%% 来源：docs/ARCHITECTURE.md §9.3（架构师 高见远）
+%% 渲染：Mermaid Live Editor / GitHub / VS Code Markdown Preview Mermaid
+
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant REPL as Repl
+    participant TK as Tokenizer
+    participant INV as CommandInvoker
+    participant REG as CommandRegistry
+    participant CMD as CreateShapeCommand
+    participant SES as EditorSession
+    participant FAC as ShapeFactory
+    participant SREG as ShapeRegistry
+    participant DOC as Document
+    participant HS as HistoryStack
+
+    U->>REPL: create rect start 120 100 160 60 #4a90d9 in node1
+    REPL->>TK: tokenize(line)
+    TK-->>REPL: [create, rect, start, 120, 100, 160, 60, #4a90d9, in, node1]
+    REPL->>INV: invoke("create", args)
+    INV->>REG: find("create")
+    REG-->>INV: CommandSpec
+    INV->>CMD: spec.create(args) → new CreateShapeCommand(args)
+    INV->>CMD: execute(session)
+    CMD->>SES: requireDocument()
+    alt 无文档
+        SES-->>CMD: throw CommandError("no document. use 'init' or 'read' first")
+    end
+    CMD->>CMD: 解析 in 子句 → 目标容器 node1
+    CMD->>DOC: findById("node1")
+    DOC-->>CMD: Group#node1
+    CMD->>FAC: create("rect", props)
+    FAC->>SREG: find("rect")
+    alt 未注册（如 box）
+        SREG-->>FAC: undefined
+        FAC-->>CMD: throw CommandError("unknown shape type: box (is the plugin loaded?)")
+    end
+    SREG-->>FAC: provider(Rect)
+    FAC-->>CMD: Rect 实例（id=start）
+    CMD->>DOC: 校验 id 唯一 → addChild(rect, node1)
+    CMD-->>INV: CommandResult(["rect#start created in g#node1"])
+    INV->>CMD: afterExecute(session)
+    CMD->>HS: push(this)  // 清空 redo 栈
+    INV-->>REPL: CommandResult
+    REPL-->>U: rect#start created in g#node1

@@ -1,0 +1,132 @@
+%% svg-editor-cli — 领域与命令层类图
+%% 来源：docs/ARCHITECTURE.md §9.1 / §9.2（架构师 高见远）
+%% 渲染：Mermaid Live Editor / GitHub / VS Code Markdown Preview Mermaid
+
+classDiagram
+direction LR
+
+class Shape {
+  <<abstract>>
+  +string id
+  +Map~string,string~ paint
+  +string tag
+  +accessors() AttributeAccessor[]
+  +translate(dx, dy) void
+  +scaleBy(factor) void
+  +getAttribute(name) string
+  +setAttribute(name, value) void
+  +describeForTree() ShapeSummary
+  +describeForShow() ShapeSummary
+  +clone() Shape
+  +toSvgXml(indent) string
+}
+
+class Container {
+  <<abstract>>
+  +Shape[] children
+  +Container parent
+  +addChild(shape, index) void
+  +removeChild(shape) boolean
+  +indexOfChild(shape) number
+  +childCount() number
+}
+
+class Document {
+  +number width
+  +number height
+  +string viewBox
+  +findById(id) Shape
+  +elementCount() number
+  +captureSnapshot() DocumentSnapshot
+  +restore(snapshot) void
+  +describeForTree() ShapeSummary
+}
+
+class Group {
+  +string tag
+}
+
+class Rect {
+  +string tag
+}
+
+class Circle {
+  +string tag
+}
+
+class Ellipse {
+  +string tag
+}
+
+class Line {
+  +string tag
+}
+
+class Text {
+  +string tag
+}
+
+class ShapeFactory {
+  +create(typeName, props) Shape
+  +createFromXml(tag, attrs) Shape
+}
+
+class ShapeRegistry {
+  +register(provider) void
+  +find(typeName) ShapeProvider
+  +typeNames() string[]
+}
+
+class ShapeProvider {
+  <<interface>>
+  +string typeName
+  +ShapeField[] params
+  +create(props) Shape
+}
+
+class ShapeField {
+  +string name
+  +string role
+  +string kind
+  +boolean required
+}
+
+class AttributeAccessor {
+  +string name
+  +string role
+  +get() string
+  +set(value) void
+}
+
+class ShapeSummary {
+  +string header
+  +string attributeLine
+  +string[] detailLines
+}
+
+class DocumentSnapshot {
+  +capture(doc) DocumentSnapshot
+  +restoreTo(doc) void
+}
+
+Shape <|-- Container
+Container <|-- Document
+Container <|-- Group
+Shape <|-- Rect
+Shape <|-- Circle
+Shape <|-- Ellipse
+Shape <|-- Line
+Shape <|-- Text
+
+Container o-- Shape : children
+Shape --> Container : parent
+
+ShapeFactory --> ShapeRegistry : 唯一类型名映射点
+ShapeRegistry o-- ShapeProvider : 已注册类型
+ShapeProvider ..> Shape : create 返回
+ShapeProvider --> ShapeField : 参数 schema
+
+Shape --> ShapeSummary : 自描述
+Shape --> AttributeAccessor : 属性访问器表
+ShapeField --> AttributeAccessor : name/role 同源
+Document --> DocumentSnapshot : Memento
