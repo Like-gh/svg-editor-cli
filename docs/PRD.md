@@ -1,7 +1,7 @@
 # svg-editor-cli — Lab1 Phase 1 产品需求文档（简单 PRD）
 
 > 需求来源：`E:/高级软开/phase_cli_1.md`（作业规格书，唯一权威来源，共 524 行）
-> 文档版本：v1.0 ｜ 状态：待架构评审 ｜ 编写：产品经理（许清楚）
+> 文档版本：v1.1（QA 验收后修订，见 §9 修订记录）｜ 状态：已实现并通过验收 ｜ 编写：产品经理（许清楚）
 > 适用项目：`E:/高级软开/svg-editor-cli`
 
 ---
@@ -114,7 +114,9 @@
 3. 所有错误输出为**单行**，前缀固定 `error: `，命令失败**不改变任何状态**。
 4. 需求来源标记：`【明文】`= 规格正文直接写明；`【示例】`= 由规格示例逐字推导；`【裁决】`= 规格未规定、由本 PRD 裁决（见第 7 章）。
 
-**需求条目总数：57 条**（P0 45 条 / P1 10 条 / P2 2 条；另含错误文案表 16 行、逐字 transcript 契约 22 行作为 P0 表格随附）
+**需求条目总数：55 条**（P0 44 条 / P1 9 条 / P2 2 条；另含错误文案表 16 行、逐字 transcript 契约 25 行作为 P0 表格随附）
+
+> **PRD 修订记录（v1.1，QA 验收后）**：① 需求条目总数由 57 更正为 **55**（原文计数与表格实际条目不符）；② R-12 的"保存路径"措辞按实现实测收紧；③ R-30 的括注与 §6 逐字示例矛盾，按 §6 更正；④ E-04 触发条件补入 `ungroup`；⑤ 新增 E-17（空 id）。详见文末 §9。
 
 ---
 
@@ -138,7 +140,7 @@
 |---|---|---|---|---|
 | R-10 | `init [w] [h]` 新建空画布 | P0 | `init 800 600` → 逐字输出 `canvas 800x600 created`；`init`（无参）→ 逐字输出 `canvas 800x600 created`（默认 800×600）；新建后文档为空树，画布尺寸 = 800×600 | 【示例】§6、§3 |
 | R-11 | `read <file.svg>` 读入为当前文档 | P0 | 读入规格中的 `other.svg` → 先逐字输出 `warning: assigned id rect1 to unnamed <rect>`，再逐字输出 `read other.svg (7 elements)`；读入后画布尺寸 = 文件的 `width`×`height` = 400×300 | 【示例】§6 |
-| R-12 | `save [file.svg]` 保存 | P0 | `save demo.svg` → 逐字输出 `saved to demo.svg (5 elements)`；无参时保存到最近一次 `read` 的路径，输出 `saved to other.svg (7 elements)` | 【示例】§6、§3 |
+| R-12 | `save [file.svg]` 保存 | P0 | `save demo.svg` → 逐字输出 `saved to demo.svg (5 elements)`；**无参时**保存到"最近一次显式 `save` 的路径"；若从未显式 `save` 过，则保存到最近一次 `read` 的路径（输出 `saved to other.svg (7 elements)`）；若文档来自 `init` 且从未显式 `save` 过 → `error: no file path. use 'save <file.svg>'`（见 E-18） | 【示例】§6、§3 |
 | R-13 | 元素计数口径 | P0 | `read` / `save` 回显中的 `(N elements)` = **文档内除根 `<svg>` 外的元素总数**（容器与其子孙均计入）。校验点：other.svg = 7；§6 会话中保存时 = 5（bg, title, c1, box, markers） | 【示例】§6 反推 |
 | R-14 | `canvas` 无参 = 显示尺寸 | P1 | 建议逐字输出 `canvas 800x600`（与 `init` 的 `canvas 800x600 created` 同源格式，去掉 `created`） | 【裁决】见 Q3 |
 | R-15 | `canvas <w> <h>` = 修改尺寸 | P1 | 修改画布 width/height；建议逐字输出 `canvas 800x600 updated`；**视作文档类命令**（执行后禁 undo/redo）；建议**不缩放**已有元素坐标 | 【裁决】见 Q3、Q4 |
@@ -160,7 +162,7 @@
 | R-27 | `set <id> <attr> <value>` 白名单 | P0 | 白名单 = `fill` / `stroke` / `stroke-width` + 各类型自身几何属性（rect: `x` `y` `width` `height`；circle: `cx` `cy` `r`；ellipse: `cx` `cy` `rx` `ry`；line: `x1` `y1` `x2` `y2`；text: `x` `y`）+ text 元素的文本内容属性 `text`。白名单外 → 逐字 `error: unknown attribute: opacity` | 【明文】§4.1 |
 | R-28 | `set` 成功回显 | P0 | `set title text "My Diagram v2"` → 逐字 `text#title updated: text="My Diagram v2"`（值带双引号） | 【示例】§6 |
 | R-29 | `group <newGid> <id1> <id2>…` 收编 | P0 | `group markers c1 box` → 逐字 `g#markers created with 2 children`；被收编元素**从各自原父容器摘出**、保持相对顺序、成为新容器的子节点 | 【示例】§6、§3 |
-| R-30 | `group` 的祖先/子孙冲突检测 | P0 | `group bad c1 markers`（c1 是 markers 的子孙）→ 逐字 `error: cannot group a container into its own descendant: markers`（错误串中点名的是**作为子孙的容器 id**，不是新 gid）；不改变状态 | 【示例】§6、§4.2 |
+| R-30 | `group` 的祖先/子孙冲突检测 | P0 | `group bad c1 markers`（c1 是 markers 的子孙）→ 逐字 `error: cannot group a container into its own descendant: markers`（错误串中点名的是**那个自身包含了另一成员作为子孙的容器**（此处为 `markers`），不是新 gid，也不是成员里的叶子）；不改变状态 | 【示例】§6、§4.2 |
 | R-31 | `ungroup <gid>` 解散容器 | P0 | 子图形提升到原容器的**父级**、并**占据原容器原来的位置**（原顺序）；对根级容器（`<svg>` 的直接子节点）→ 逐字 `error: cannot ungroup top-level container: scene`；成功回显建议 `g#g1 ungrouped` | 【明文】§3、§4.2 |
 | R-32 | `addto <gid> <id>` 移动归属 | P0 | 把已有图形移入指定容器，作为该容器的**最后一个子节点**；目标非容器 → `error: not a container: start`；成功回显建议 `rect#r1 added to g#g1` | 【明文】§3；回显见 Q8 |
 | R-33 | `front <id>` / `back <id>` 调整 z-order | P0 | 在**同一父容器内**把目标移到最前 / 最后（SVG 绘制顺序 = 文档顺序，故"最前"= 同级最后一个）；成功回显建议 `rect#r1 moved to front` / `rect#r1 moved to back` | 【明文】§3；回显见 Q8 |
@@ -214,7 +216,7 @@
 | E-01 | `error: id already exists: r1` | `create` / `group` 的 id 与文档中已有 id 重复（大小写敏感） | 【明文】§4.2 |
 | E-02 | `error: no such shape: r9` | 命令中的目标 id 不存在（`delete` / `move` / `scale` / `set` / `group` 成员 / `addto` / `front` / `back` / `show` / `tree`） | 【明文】§4.2 |
 | E-03 | `error: no such container: node9` | `in <containerId>` / `addto` 的目标容器 id 不存在 | 【明文】§4.2 |
-| E-04 | `error: not a container: start` | `in` / `addto` 目标存在但不是 `g` 类型 | 【明文】§4.2 |
+| E-04 | `error: not a container: start` | `in` / `addto` / `ungroup` 的目标存在但不是 `g` 类型 | 【明文】§4.2 |
 | E-05 | `error: unknown shape type: hexagon (is the plugin loaded?)` | 类型名未注册（**本阶段 `create box` → `error: unknown shape type: box (is the plugin loaded?)`**） | 【明文】§4.2、§4.4 |
 | E-06 | `error: cannot ungroup composite shape: n1` | `ungroup` 目标是复合图形（内部结构由插件拥有）。本阶段无 `box`，该分支**保留但不可达**，文案需实现到位以备后续阶段 | 【明文】§4.2、§4.4 |
 | E-07 | `error: cannot group a container into its own descendant: g1` | `group` 的成员中同时包含某容器及其子孙（错误串点名**作为子孙的容器 id**） | 【明文】§4.2、§6 |
@@ -227,6 +229,10 @@
 | E-14 | `error: undo not allowed after io command` | 文档类命令（`init` / `read` / `save` / `canvas` 改尺寸）执行后调用 `undo` 或 `redo` | 【明文】§4.3、§6 |
 | E-15 | `error: nothing to undo` | `undo` 时撤销栈为空（建议文案） | 【裁决】见 Q9 |
 | E-16 | `error: nothing to redo` | `redo` 时重做栈为空（建议文案；亦用于"undo 后有新编辑清空 redo 栈"的场景） | 【裁决】见 Q9 |
+| E-17 | `error: invalid id: must not be empty` | `create` / `group` 的 id 为空串或纯空白（id 是唯一寻址依据，空 id 会产生畸形标题 `rect#`） | 【裁决】v1.1 新增，见 §9 |
+| E-18 | `error: no file path. use 'save <file.svg>'` | `save` 无参，但当前文档来自 `init` 且从未显式 `save` 过（没有可回退的路径） | 【裁决】v1.1 新增，见 §9 |
+
+> **告警文案（非错误，不改变任何状态）**：① `warning: assigned id <id> to unnamed <tag>` —— 读入外部 SVG 时自动补 id；② `warning: skipped unsupported element: <tag>` —— 读入未建模的元素标签（如 `<path>`），忽略且不计入元素数；③ `warning: skipped attribute <name> on <tag>#<id>` —— 读入未建模的属性（如 `transform`），忽略并在 §9 说明的语义边界内显式提示。
 
 ---
 
@@ -477,7 +483,7 @@ svg (800x600)
 | 增强项 | R-90 ~ R-95 | 6 |
 | 错误表 | E-01 ~ E-16 | 16（逐字文案） |
 | 逐字会话契约 | T-01 ~ T-25 | 25（逐字期望输出） |
-| **合计需求条目** | | **57**（P0 45 / P1 10 / P2 2） |
+| **合计需求条目** | | **55**（P0 44 / P1 9 / P2 2） |
 
 ### 8.3 引用
 
@@ -485,3 +491,18 @@ svg (800x600)
   - §2 通用约定、§2.1 实现范式
   - §3 命令总表、§4.1 create 参数表、§4.2 错误信息约定、§4.3 undo/redo 粒度、§4.4 复合图形 `box`（后续阶段）
   - §5.1 tree、§5.2 show、§6 典型会话 transcript、§6.1 两节点流程图
+
+---
+
+## 9. 修订记录（v1.1 · QA 独立验收后）
+
+> 本节记录 PRD 在实现与 QA 验收过程中被修订的内容。所有修订均由**规格原文**或**QA 实测证据**驱动，不降低任何验收强度；修订项同步反映在 `doc/README.md` 的「一致性自查」与「过程记录」中。
+
+| # | 位置 | 修订前 | 修订后 | 驱动依据 |
+|---|---|---|---|---|
+| PR-1 | §4.1 / §8.2 计数 | 需求条目 57 条（P0 45 / P1 10 / P2 2） | **55 条（P0 44 / P1 9 / P2 2）** | 表格实际枚举 55 条 R-xx，原计数与表格不符（QA 观察项 O-11） |
+| PR-2 | R-12 | 「无参时保存到最近一次 `read` 的路径」 | 明确为「最近一次**显式 save** 的路径；无显式 save 则退回最近一次 read 的路径；两者皆无 → E-18」 | 规格 §3 只规定"读入时的路径"，未规定"先 save 再无参 save"的链；实现取**更可预测**的语义并在此写实（QA 缺陷 D-03） |
+| PR-3 | R-30 括注 | 「错误串中点名的是**作为子孙的容器 id**」 | 「点名的是**那个自身包含了另一成员作为子孙的容器**」 | 原括注与规格 §6 的逐字示例矛盾（§6 中 `markers` 是包含 `c1` 的**祖先**容器）。实现按 §6 正确，无需改码，仅修正文档表述（QA 观察项 O-06） |
+| PR-4 | E-04 触发条件 | `in` / `addto` 目标存在但不是 `g` 类型 | 补入 `ungroup` | `ungroup <叶子>` 复用同一条文案；原文未枚举该触发点（QA 缺陷 D-06） |
+| PR-5 | §4.8 | — | **新增 E-17**（空 id 拒绝）、**E-18**（save 无路径），并补充三条**告警文案**说明 | QA 缺陷 D-07（空 id 产生畸形标题 `rect#`）与 D-09（save 无参无路径）；告警为非错误、不改变状态 |
+| PR-6 | R-61 | 「未识别的属性忽略但不报错」 | 「未识别的**属性**忽略、**不报错**但产出 `warning: skipped attribute …` 告警」；未识别的**元素**忽略并产出 `warning: skipped unsupported element: …` 告警 | QA 缺陷 D-02：未建模属性被**静默**丢弃是唯一 P1 问题。**决定不做属性透传**——若透传 `transform`，对含 transform 的容器执行 `move`/`scale`（本阶段作用于子孙自身坐标）会与组级变换叠加，产生"看似保真、实则语义错误"的结果；完整解法是**组变换建模**，超出本阶段范围（与 `box` 插件化同理：留缝不实现）。故改为**显式告警 + 文档声明** |
