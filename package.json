@@ -1,0 +1,30 @@
+{
+  "name": "svg-editor-cli",
+  "version": "0.1.0",
+  "description": "Lab1 Phase 1 — 纯终端 SVG 结构化编辑器（Command 模式）",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "bin": {
+    "svg-editor": "dist/index.js"
+  },
+  "scripts": {
+    "cli": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.test.json",
+    "check:deps": "node scripts/check-deps.mjs"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
