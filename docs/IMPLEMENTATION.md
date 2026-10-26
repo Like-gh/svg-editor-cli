@@ -94,7 +94,7 @@ src/
 
 scripts/check-deps.mjs              依赖方向 + 一类一文件 + 禁用项 自检脚本
 test/fixtures/other.svg             规格 §6 的样例外部文件
-test/unit/…                         单元测试（12 个文件 / 93 个用例）
+test/unit/…                         单元测试（12 个文件 / 97 个用例）
 test/io/…                           IO 往返测试
 test/support/…                      测试夹具（4 个）
 ```
@@ -340,7 +340,7 @@ $ npm run check:deps
 ```bash
 npm install          # 依赖：fast-xml-parser（唯一运行时依赖）+ 4 个 devDeps
 npm run cli          # 启动 REPL（= tsx src/index.ts）
-npm test             # 单元测试（93 用例）
+npm test             # 单元测试（97 用例）
 npm run typecheck    # 类型检查（src + test）
 npm run check:deps   # 依赖方向 + 一类一文件 + 禁用项 自检
 npm run build        # 产出 dist/（ESM，可 node dist/index.js 运行）
